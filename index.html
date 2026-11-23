@@ -1,1 +1,749 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vontade dos Mares</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600;700&family=Pirata+One&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#f4eedd;--bg2:#ece3cd;--card:#fbf8ef;--inp:#fffdf7;--fg:#1b2a3a;--mut:#5a6a79;--line:#dccfb3;--accent:#0d6b78;--accent-fg:#fff;--vida:#c2412f;--vigor:#2f7fb8;--ok:#2b7a4b;--bad:#b42318;--sans:'Inter',system-ui,sans-serif;--mono:'IBM Plex Mono',monospace;--display:'Pirata One',serif}
+@media(prefers-color-scheme:dark){:root{--bg:#0b1520;--bg2:#101e2b;--card:#14232f;--inp:#0f1c27;--fg:#e5edf4;--mut:#94a7b7;--line:#263a4b;--accent:#4dbccc;--accent-fg:#06222a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--sans);padding:0 max(16px,env(safe-area-inset-left,0px)) 40px}
+h1,h2,h3,h4{margin:0}
+h1{font:400 2rem/1.1 var(--display)}
+h2{font:400 1.6rem/1.2 var(--display)}
+h3{font:400 1.3rem/1.2 var(--display);color:var(--accent);margin-bottom:10px}
+h4{font-size:.8rem;margin:16px 0 8px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+input,select,textarea,button{font:inherit;color:inherit}
+input,select,textarea{width:100%;background:var(--inp);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-height:40px}
+button{cursor:pointer}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-weight:600}
+.btn:hover{border-color:var(--accent)}
+.btn.primario{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.mini{min-height:32px;padding:4px 10px;font-size:.85rem}
+.btn.ghost{background:transparent}
+.btn.perigo{color:var(--bad);border-color:var(--bad);background:transparent}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.hint{color:var(--mut);font-size:.85rem}
+label{display:block;font-size:.85rem;color:var(--mut);font-weight:600}
+label>input,label>select{margin-top:4px;font-weight:400;color:var(--fg)}
+.login{max-width:420px;margin:10vh auto 0;padding:0 16px;text-align:center}
+.login h1{font-size:2.6rem;margin-bottom:0}
+.login .sub{color:var(--mut);margin:4px 0 20px}
+.login .card{text-align:left}
+.login-actions{margin-top:16px;display:grid;gap:10px}
+.divider{text-align:center;color:var(--mut);font-size:.85rem}
+.join-row{display:flex;gap:6px}
+.join-row input{text-transform:uppercase}
+.login .hint{margin-top:16px}
+.topo{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 0 8px;max-width:1200px;margin:0 auto}
+.topo .marca h1{font-size:1.5rem}
+.topo .direita{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;border:1px solid var(--line);font-size:.8rem;background:var(--card)}
+.pill.gm{border-color:var(--accent);color:var(--accent)}
+.room-bar{display:flex;gap:16px;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 14px;max-width:1200px;margin:0 auto 16px;font-size:.9rem}
+.room-bar .code{font-family:var(--mono);font-weight:700;letter-spacing:.1em;color:var(--accent)}
+.abas{display:flex;gap:2px;border-bottom:1px solid var(--line);max-width:1200px;margin:0 auto 16px}
+.aba{border:0;background:none;padding:10px 16px;font-weight:600;color:var(--mut);border-bottom:3px solid transparent}
+.aba.on{color:var(--accent);border-bottom-color:var(--accent)}
+#tab-content{max-width:1200px;margin:0 auto}
+.ficha-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.save-status{font-size:.85rem;color:var(--mut)}
+.grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:8px}
+.atr-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 80px;gap:6px;align-items:center;margin-bottom:8px}
+.atr-head{font-size:.72rem;text-transform:uppercase;color:var(--mut);font-weight:700;letter-spacing:.04em}
+.atr-row{display:contents}
+.atr-row label{font-weight:400;color:var(--fg);font-size:.92rem}
+.atr-row input{min-height:34px;text-align:center;font-family:var(--mono)}
+.atr-row b{font-family:var(--mono);text-align:center;font-size:1.05rem}
+.der-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px}
+.der-row{display:flex;justify-content:space-between;background:var(--bg2);padding:6px 10px;border-radius:6px}
+.der-row b{font-family:var(--mono)}
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px}
+.stat{background:var(--bg2);border-radius:8px;padding:8px;text-align:center;display:grid}
+.stat span{font-size:.72rem;color:var(--mut);text-transform:uppercase}
+.stat b{font-family:var(--mono);font-size:1.2rem}
+.bar-row{display:flex;align-items:center;gap:8px;margin:8px 0}
+.bar-row label{min-width:60px}
+.item-row{display:flex;gap:6px;margin-bottom:6px}
+.item-row input{flex:1;min-height:34px}
+.cond-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:4px}
+.chk{display:flex;align-items:center;gap:6px;font-weight:400;color:var(--fg);font-size:.88rem;cursor:pointer}
+.chk input[type="checkbox"]{width:18px;height:18px;min-height:0;accent-color:var(--accent)}
+.ficha-acoes{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+textarea{resize:vertical}
+.mesa-wrap{display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:900px){.mesa-wrap{grid-template-columns:1fr 1fr;align-items:start}}
+.dice-bar{display:flex;gap:6px;margin-bottom:8px}
+.quick-dice{display:flex;gap:6px;flex-wrap:wrap}
+.feed{display:flex;flex-direction:column;gap:6px;max-height:55vh;overflow-y:auto;padding:4px;background:var(--bg2);border-radius:8px;min-height:200px}
+.feed-item{background:var(--card);border-radius:8px;padding:8px 10px;border-left:3px solid var(--line)}
+.feed-item.chat{border-left-color:var(--accent)}
+.feed-item.roll{border-left-color:var(--vida)}
+.feed-head{display:flex;gap:6px;align-items:baseline;font-size:.85rem}
+.feed-head time{margin-left:auto;color:var(--mut);font-size:.72rem}
+.feed-item p{margin:4px 0 0;overflow-wrap:anywhere}
+.roll-body{display:flex;gap:10px;align-items:center;margin-top:4px}
+.roll-total{font:700 1.6rem var(--mono)}
+.roll-detail{font-size:.85rem;color:var(--mut)}
+.die{display:inline-grid;place-items:center;min-width:1.6em;padding:0 4px;height:1.6em;border:1px solid var(--line);border-radius:5px;font-family:var(--mono);font-weight:600;font-size:.8rem;background:var(--card);margin:0 1px}
+.mod{font-family:var(--mono);color:var(--mut)}
+.roll-extra{font-size:.8rem;color:var(--mut);margin-top:4px}
+.chat-bar{display:flex;gap:6px;margin-top:10px}
+.feed-card{min-width:0}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:.9rem;box-shadow:0 4px 12px rgba(0,0,0,.3);z-index:100;transition:opacity .3s,transform .3s}
+.toast.bad{background:var(--bad);color:#fff}
+.toast.sai{opacity:0;transform:translateX(-50%) translateY(10px)}
+.modal-back{position:fixed;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center;padding:16px;z-index:50}
+.modal{background:var(--card);border-radius:12px;width:min(100%,500px);max-height:85vh;display:flex;flex-direction:column}
+.modal header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+.modal .corpo{padding:16px;overflow-y:auto}
+.all-char{background:var(--bg2);border-radius:8px;padding:10px;margin-bottom:8px}
+</style>
+</head>
+<body>
+<div id="app"><div class="card" style="max-width:400px;margin:20vh auto;text-align:center"><h3>Carregando…</h3></div></div>
+<div id="toasts"></div>
+<script>
+// ==========================================================================
+// CONFIG — troque pelos valores do seu projeto Supabase
+// ==========================================================================
+const SUPABASE_URL = 'COLE_AQUI_SUA_URL';
+const SUPABASE_KEY = 'COLE_AQUI_SUA_ANON_KEY';
 
+// ==========================================================================
+// ENGINE (parte essencial: dados, escalas e cálculo)
+// ==========================================================================
+(function(G){
+  const V = G.VDM = {};
+  const n = x => Number.isFinite(+x) ? +x : 0;
+  V.n = n;
+  V.clamp = (x,a,b) => Math.min(b, Math.max(a,x));
+  function rnd(k){
+    k = Math.max(1, Math.trunc(k));
+    const c = G.crypto;
+    if (c && c.getRandomValues){
+      const lim = Math.floor(4294967296/k)*k, a = new Uint32Array(1);
+      do { c.getRandomValues(a); } while (a[0] >= lim);
+      return (a[0] % k) + 1;
+    }
+    return Math.floor(Math.random()*k)+1;
+  }
+  V.rnd = rnd;
+  V.parseExpr = function(expr){
+    const s = String(expr||'').replace(/\s+/g,'').toLowerCase();
+    if (!s) return null;
+    const re = /([+-]?)(?:(\d*)d(\d+|%)(?:k([hl])(\d+))?|(\d+))/y;
+    const terms = []; let i = 0;
+    while (i < s.length){
+      re.lastIndex = i;
+      const m = re.exec(s);
+      if (!m || (i > 0 && !m[1])) return null;
+      const sign = m[1] === '-' ? -1 : 1;
+      if (m[6] !== undefined) terms.push({sign, flat:+m[6]});
+      else {
+        const cnt = m[2] === '' ? 1 : +m[2], sides = m[3] === '%' ? 100 : +m[3];
+        if (cnt < 1 || cnt > 100 || sides < 1 || sides > 1000) return null;
+        terms.push({sign, n: cnt, sides, keep: m[4] ? {mode: m[4], k: Math.min(+m[5], cnt)} : null});
+      }
+      i = re.lastIndex;
+    }
+    return terms;
+  };
+  V.rollTerms = function(terms, o){
+    o = o || {};
+    const groups = []; let flat = 0, total = 0;
+    for (const t of terms){
+      if (t.flat !== undefined){ flat += t.sign*t.flat; total += t.sign*t.flat; continue; }
+      const r = [];
+      for (let i = 0; i < t.n*(o.dobro?2:1); i++) r.push(rnd(t.sides));
+      let kept = r.map((_,i)=>i);
+      if (t.keep){
+        const ord = r.map((_,i)=>i).sort((a,b)=>(t.keep.mode==='h'?r[b]-r[a]:r[a]-r[b]));
+        kept = ord.slice(0, t.keep.k);
+      }
+      const sum = kept.reduce((a,i)=>a+r[i], 0);
+      const g = {e: r.length+'d'+t.sides, r, s: t.sign};
+      if (kept.length !== r.length) g.k = kept.sort((a,b)=>a-b);
+      groups.push(g);
+      total += t.sign*sum;
+    }
+    return {groups, flat, total};
+  };
+  V.rollExpr = (expr,o) => { const t = V.parseExpr(expr); return t ? V.rollTerms(t,o) : null; };
+  V.d20 = function(adv){
+    adv = Math.trunc(adv||0);
+    const r = [];
+    for (let i = 0; i < 1+Math.abs(adv); i++) r.push(rnd(20));
+    const v = adv >= 0 ? Math.max.apply(null, r) : Math.min.apply(null, r);
+    return {r, v, k: r.indexOf(v)};
+  };
+  V.don = nivel => V.clamp(Math.floor((Math.max(1, Math.trunc(n(nivel)||1))-1)/4)+1, 1, 5);
+  V.half = x => Math.trunc(n(x)/2);
+  V.ATTR_MAIN = [
+    {k:'FOR',n:'Força'},{k:'DES',n:'Destreza'},{k:'VIT',n:'Vitalidade'},{k:'APA',n:'Aparência'},
+    {k:'CON',n:'Conhecimento'},{k:'RAC',n:'Raciocínio'},{k:'VON',n:'Vontade'},{k:'DST',n:'Destino'},
+    {k:'VEL',n:'Velocidade'},{k:'RSL',n:'Resiliência'}
+  ];
+  V.ATTR_DER = [
+    {k:'AGI',n:'Agilidade'},{k:'RES',n:'Resistência'},{k:'PER',n:'Persistência'},
+    {k:'DIS',n:'Disciplina'},{k:'CAR',n:'Carisma'}
+  ];
+  V.CLASSES = {
+    lutador:{n:'Lutador',vida:10,vigor:6},
+    guerrilheiro:{n:'Guerrilheiro',vida:10,vigor:6},
+    artista_marcial:{n:'Artista Marcial',vida:8,vigor:8},
+    espadachim:{n:'Espadachim',vida:8,vigor:8},
+    atirador:{n:'Atirador',vida:6,vigor:10},
+    especialista:{n:'Especialista',vida:6,vigor:10},
+    assassino:{n:'Assassino',vida:4,vigor:12},
+    ladrao:{n:'Ladrão',vida:4,vigor:12}
+  };
+  V.calc = function(s){
+    const A = {};
+    V.ATTR_MAIN.forEach(a => { const x = (s.atr && s.atr[a.k]) || {}; A[a.k] = n(x.b) + n(x.m); });
+    const ex = V.clamp(Math.trunc(n(s.exaustao)), 0, 10);
+    const D = {AGI:A.DES+A.VEL, RES:A.FOR+A.RSL, PER:A.CON+A.VIT, DIS:A.RAC+A.VON, CAR:A.APA+A.DST};
+    Object.keys(D).forEach(k => { D[k] += n(s.dm && s.dm[k]); });
+    const don = V.don(s.nivel) + n(s.donExtra);
+    const agiE = D.AGI - ex, resE = D.RES - ex;
+    const CA = 1 + Math.max(agiE, resE) + n(s.caBonus);
+    const CD = don + Math.max(D.PER, D.DIS) - ex + n(s.cdBonus);
+    const cl = V.CLASSES[s.classe];
+    const vb = cl ? cl.vida : 6, gb = cl ? cl.vigor : 6;
+    const vidaTotal = Math.max(0, vb + D.RES + n(s.vidaBonus));
+    const vigorTotal = Math.max(0, gb + D.PER + n(s.vigorBonus));
+    return {A, D, ex, don, CA, CD, vidaTotal, vigorTotal, agiE, resE};
+  };
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+
+// ==========================================================================
+// DATA (essencial)
+// ==========================================================================
+(function(G){
+  const V = G.VDM;
+  V.RACAS = ['Humano','Tritão / Homem-Peixe','Meio-Tritão','Mink','Meio-Mink','Povo do Céu','Anão Tontatta','Gigante','Wotan','Oni','Dosundada'];
+  V.POTENCIAIS = [
+    {id:'humano',n:'Humano / Comum'},
+    {id:'sobre',n:'Sobre-Humano'},
+    {id:'monstro',n:'Monstro'},
+    {id:'desastre',n:'Desastre Sobrenatural'}
+  ];
+  V.PROFISSOES = ['Capitão','Combatente','Navegador','Médico','Artilheiro','Cozinheiro','Músico','Carpinteiro','Timoneiro','Arqueólogo','Exótico','Cientista','Caçador de Recompensas','Marinheiro','Revolucionário'];
+  V.CONDICOES_BASICAS = ['Agarrado','Amedrontado','Atordoado','Caído','Cego','Contido','Enfeitiçado','Enfraquecido','Envenenado','Exaustão','Desorientado','Incapacitado','Inconsciente','Invisível','Intoxicado','Paralisado','Petrificado','Provocado','Sangramento','Surdo'];
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+
+// ==========================================================================
+// STORE (Supabase)
+// ==========================================================================
+(function(G){
+  const A = G.APP = G.APP || {};
+  const S = A.Store = {
+    client: null, user: null,
+    async init(){
+      this.client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      let { data: { user } } = await this.client.auth.getUser();
+      if (!user){
+        const { data, error } = await this.client.auth.signInAnonymously();
+        if (error) throw error;
+        user = data.user;
+      }
+      this.user = user;
+    },
+    genCode(){
+      const ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+      const arr = new Uint32Array(6); crypto.getRandomValues(arr);
+      let s = '';
+      for (let i = 0; i < 6; i++) s += ALPHA[arr[i] % ALPHA.length];
+      return s;
+    },
+    async createRoom(name){
+      const code = this.genCode();
+      const e1 = (await this.client.from('rooms').insert({id:code, gm_id:this.user.id, gm_name:name})).error;
+      if (e1) throw e1;
+      const e2 = (await this.client.from('members').insert({user_id:this.user.id, room_id:code, name, role:'gm'})).error;
+      if (e2) throw e2;
+      return code;
+    },
+    async findRoom(code){
+      const r = await this.client.from('rooms').select('*').eq('id', code.toUpperCase()).maybeSingle();
+      return r.data;
+    },
+    async joinRoom(code, name){
+      const room = await this.findRoom(code);
+      if (!room) throw new Error('Mesa não encontrada com esse código');
+      const e = (await this.client.from('members').upsert({user_id:this.user.id, room_id:room.id, name, role:'player'})).error;
+      if (e) throw e;
+      return room;
+    },
+    async getMembership(code){
+      const r = await this.client.from('members').select('*').eq('user_id', this.user.id).eq('room_id', code).maybeSingle();
+      return r.data;
+    },
+    async getMembers(code){
+      const r = await this.client.from('members').select('*').eq('room_id', code);
+      return r.data || [];
+    },
+    async getCharacter(code){
+      const r = await this.client.from('characters').select('*').eq('user_id', this.user.id).eq('room_id', code).maybeSingle();
+      return r.data;
+    },
+    async getAllCharacters(code){
+      const r = await this.client.from('characters').select('*').eq('room_id', code);
+      return r.data || [];
+    },
+    async saveCharacter(code, data){
+      const e = (await this.client.from('characters').upsert({user_id:this.user.id, room_id:code, data, updated_at:new Date().toISOString()}, {onConflict:'user_id,room_id'})).error;
+      if (e) throw e;
+    },
+    async getFeed(code, limit){
+      const r = await this.client.from('feed').select('*').eq('room_id', code).order('id', {ascending:false}).limit(limit||100);
+      return (r.data || []).reverse();
+    },
+    async postFeed(code, entry){
+      const e = (await this.client.from('feed').insert({room_id:code, author_name:entry.author, author_id:this.user.id, kind:entry.kind, payload:entry.payload})).error;
+      if (e) throw e;
+    },
+    subscribeFeed(code, cb){
+      return this.client.channel('feed:'+code)
+        .on('postgres_changes', {event:'INSERT', schema:'public', table:'feed', filter:'room_id=eq.'+code}, p => cb(p.new))
+        .subscribe();
+    },
+    async postCharacterFor(code, ownerId, data){
+      const e = (await this.client.from('characters').upsert({user_id:ownerId, room_id:code, data, updated_at:new Date().toISOString()}, {onConflict:'user_id,room_id'})).error;
+      if (e) throw e;
+    }
+  };
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+
+// ==========================================================================
+// APP (UI)
+// ==========================================================================
+(function(G){
+  const V = G.VDM;
+  const A = G.APP;
+  const S = A.Store;
+  const $ = (s,r)=> (r||document).querySelector(s);
+  const $$ = (s,r)=> Array.from((r||document).querySelectorAll(s));
+  const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  const App = A.App = {
+    view:'boot', tab:'ficha', room:null, member:null, character:null,
+    feed:[], members:[], feedChannel:null, saveTimer:null,
+
+    async init(){
+      try {
+        await S.init();
+        await this.boot();
+      } catch(e){
+        $('#app').innerHTML = '<div class="card" style="max-width:520px;margin:10vh auto"><h3>Erro</h3><p>'+esc(e.message)+'</p><p class="hint">Verifique se você trocou <code>SUPABASE_URL</code> e <code>SUPABASE_KEY</code> no topo do arquivo.</p></div>';
+      }
+    },
+    async boot(){
+      const params = new URLSearchParams(location.search);
+      const code = params.get('mesa');
+      if (code){
+        try {
+          const mem = await S.getMembership(code);
+          if (mem){ await this.enterRoom(code, mem); return; }
+        } catch(e){}
+      }
+      this.showLogin();
+    },
+    showLogin(){
+      this.view = 'login';
+      $('#app').innerHTML = `
+        <div class="login">
+          <h1>Vontade dos Mares</h1>
+          <p class="sub">One Piece RPG</p>
+          <div class="card">
+            <label>Seu nome
+              <input id="in-name" placeholder="Como os outros vão te ver" maxlength="30">
+            </label>
+            <div class="login-actions">
+              <button class="btn primario" id="btn-create">Criar mesa (Mestre)</button>
+              <div class="divider">— ou —</div>
+              <div class="join-row">
+                <input id="in-code" placeholder="CÓDIGO" maxlength="8">
+                <button class="btn" id="btn-join">Entrar</button>
+              </div>
+            </div>
+            <p class="hint">O mestre cria a mesa e compartilha o código (ou o link) com os jogadores.</p>
+          </div>
+        </div>`;
+      $('#btn-create').onclick = () => this.createRoom();
+      $('#btn-join').onclick = () => this.joinRoom();
+      $('#in-code').onkeydown = e => { if (e.key === 'Enter') this.joinRoom(); };
+      $('#in-name').focus();
+    },
+    async createRoom(){
+      const name = $('#in-name').value.trim();
+      if (!name) return this.toast('Digite seu nome', true);
+      try {
+        const code = await S.createRoom(name);
+        location.search = '?mesa=' + code;
+      } catch(e){ this.toast('Erro ao criar mesa: ' + e.message, true); }
+    },
+    async joinRoom(){
+      const name = $('#in-name').value.trim();
+      const code = $('#in-code').value.trim().toUpperCase();
+      if (!name) return this.toast('Digite seu nome', true);
+      if (!code) return this.toast('Digite o código da mesa', true);
+      try {
+        const room = await S.joinRoom(code, name);
+        location.search = '?mesa=' + room.id;
+      } catch(e){ this.toast(e.message, true); }
+    },
+    newCharacter(name){
+      const atr = {};
+      V.ATTR_MAIN.forEach(a => { atr[a.k] = {b:0, m:0}; });
+      return {
+        nome:name, raca:'Humano', classe:'lutador', estilo:'', profissao:'', potencial:'humano',
+        nivel:1, atr, dm:{AGI:0,RES:0,PER:0,DIS:0,CAR:0},
+        det:0, exaustao:0, vidaBonus:0, vigorBonus:0, caBonus:0, cdbonus:0, donExtra:0,
+        vidaAtual:0, vigorAtual:0,
+        ataques:[], habs:[], cond:[], notas:''
+      };
+    },
+    async enterRoom(code, member){
+      this.view = 'room';
+      this.member = member;
+      this.room = await S.findRoom(code);
+      this.members = await S.getMembers(code);
+      const charRec = await S.getCharacter(code);
+      this.character = (charRec && charRec.data) || this.newCharacter(member.name);
+      this.feed = await S.getFeed(code);
+      if (this.feedChannel) S.client.removeChannel(this.feedChannel);
+      this.feedChannel = S.subscribeFeed(code, item => {
+        this.feed.push(item);
+        if (this.tab === 'mesa') this.renderFeed();
+      });
+      this.renderRoom();
+    },
+    renderRoom(){
+      const isGM = this.member.role === 'gm';
+      const url = location.origin + location.pathname + '?mesa=' + this.room.id;
+      $('#app').innerHTML = `
+        <header class="topo">
+          <div class="marca"><h1>Vontade dos Mares</h1></div>
+          <div class="direita">
+            <span class="pill ${isGM?'gm':''}">${isGM?'Mestre':'Jogador'} • ${esc(this.member.name)}</span>
+            <button class="btn mini" id="btn-copy">Copiar link</button>
+            <button class="btn mini ghost" id="btn-leave">Sair</button>
+          </div>
+        </header>
+        <div class="room-bar">
+          <div><b>Mesa:</b> <span class="code">${esc(this.room.id)}</span></div>
+          <div><b>Na mesa:</b> ${this.members.map(m=>esc(m.name)+(m.role==='gm'?' (M)':'')).join(', ')}</div>
+        </div>
+        <nav class="abas">
+          <button class="aba ${this.tab==='ficha'?'on':''}" data-tab="ficha">📜 Ficha</button>
+          <button class="aba ${this.tab==='mesa'?'on':''}" data-tab="mesa">🎲 Mesa</button>
+        </nav>
+        <main id="tab-content"></main>`;
+      $('#btn-copy').onclick = () => {
+        navigator.clipboard.writeText(url).then(()=>this.toast('Link copiado!')).catch(()=>this.toast(url));
+      };
+      $('#btn-leave').onclick = () => {
+        if (confirm('Sair da mesa?')) location.href = location.pathname;
+      };
+      $$('.aba').forEach(b => b.onclick = () => { this.tab = b.dataset.tab; this.renderRoom(); });
+      this.renderTab();
+    },
+    renderTab(){
+      if (this.tab === 'ficha') this.renderFicha();
+      else if (this.tab === 'mesa') this.renderMesa();
+    },
+    renderFicha(){
+      const c = this.character;
+      const calc = V.calc(c);
+      const isGM = this.member.role === 'gm';
+      const attrRows = V.ATTR_MAIN.map(a => `
+        <div class="atr-row">
+          <label>${a.n}</label>
+          <input type="number" data-attr="${a.k}" data-field="b" value="${(c.atr[a.k]&&c.atr[a.k].b)||0}" min="-10" max="20">
+          <input type="number" data-attr="${a.k}" data-field="m" value="${(c.atr[a.k]&&c.atr[a.k].m)||0}" min="-10" max="20">
+          <b>${calc.A[a.k]}</b>
+        </div>`).join('');
+      const derRows = V.ATTR_DER.map(a => `<div class="der-row"><span>${a.n}</span><b>${calc.D[a.k]}</b></div>`).join('');
+      const ataquesHTML = (c.ataques||[]).map((at,i) => `
+        <div class="item-row">
+          <input value="${esc(at.n||'')}" placeholder="Nome" data-atk="${i}" data-f="n">
+          <input value="${esc(at.dano||'1d6')}" placeholder="Dano" data-atk="${i}" data-f="dano" style="max-width:90px">
+          <input value="${at.bonus||0}" type="number" placeholder="+bon" data-atk="${i}" data-f="bonus" style="max-width:70px">
+          <button class="btn mini" data-rollatk="${i}">🎲</button>
+          <button class="btn mini perigo" data-delatk="${i}">✕</button>
+        </div>`).join('');
+      const habsHTML = (c.habs||[]).map((h,i) => `
+        <div class="item-row">
+          <input value="${esc(h.n||'')}" placeholder="Nome da habilidade" data-hab="${i}" data-f="n">
+          <button class="btn mini perigo" data-delhab="${i}">✕</button>
+        </div>`).join('');
+      const condHTML = V.CONDICOES_BASICAS.map(cnd => `
+        <label class="chk"><input type="checkbox" data-cond="${cnd}" ${(c.cond||[]).includes(cnd)?'checked':''}> ${cnd}</label>`).join('');
+      $('#tab-content').innerHTML = `
+        <div class="card">
+          <div class="ficha-header"><h2>${esc(c.nome)}</h2><div class="save-status" id="save-status"></div></div>
+          <h4>Identidade</h4>
+          <div class="grid-3">
+            <label>Nome<input value="${esc(c.nome)}" data-f="nome"></label>
+            <label>Raça<select data-f="raca">${V.RACAS.map(r=>`<option ${r===c.raca?'selected':''}>${r}</option>`).join('')}</select></label>
+            <label>Classe<select data-f="classe">${Object.keys(V.CLASSES).map(k=>`<option value="${k}" ${k===c.classe?'selected':''}>${V.CLASSES[k].n}</option>`).join('')}</select></label>
+            <label>Profissão<select data-f="profissao">${V.PROFISSOES.map(p=>`<option ${p===c.profissao?'selected':''}>${p}</option>`).join('')}</select></label>
+            <label>Potencial<select data-f="potencial">${V.POTENCIAIS.map(p=>`<option value="${p.id}" ${p.id===c.potencial?'selected':''}>${p.n}</option>`).join('')}</select></label>
+            <label>Nível<input type="number" value="${c.nivel||1}" min="1" max="20" data-f="nivel"></label>
+          </div>
+          <h4>Status</h4>
+          <div class="grid-3">
+            <label>Determinação (%)<input type="number" value="${c.det||0}" min="-100" max="100" data-f="det"></label>
+            <label>Exaustão<input type="number" value="${c.exaustao||0}" min="0" max="10" data-f="exaustao"></label>
+          </div>
+          <h4>Atributos</h4>
+          <div class="atr-grid">
+            <div class="atr-head">Atributo</div><div class="atr-head">Base</div><div class="atr-head">Mod</div><div class="atr-head">Total</div>
+            ${attrRows}
+          </div>
+          <h4>Derivados</h4>
+          <div class="der-grid">${derRows}</div>
+          <h4>Combate</h4>
+          <div class="stat-row">
+            <div class="stat"><span>CA</span><b>${calc.CA}</b></div>
+            <div class="stat"><span>CD</span><b>${calc.CD}</b></div>
+            <div class="stat"><span>Don</span><b>${calc.don}</b></div>
+            <div class="stat"><span>Vida Máx</span><b>${calc.vidaTotal}</b></div>
+            <div class="stat"><span>Vigor Máx</span><b>${calc.vigorTotal}</b></div>
+          </div>
+          <div class="bar-row">
+            <label>Vida</label>
+            <button class="btn mini" data-life="-1">−</button>
+            <input type="number" value="${c.vidaAtual==null?calc.vidaTotal:c.vidaAtual}" data-f="vidaAtual" style="max-width:90px">
+            <span>/ ${calc.vidaTotal}</span>
+            <button class="btn mini" data-life="+1">+</button>
+          </div>
+          <div class="bar-row">
+            <label>Vigor</label>
+            <button class="btn mini" data-vig="-1">−</button>
+            <input type="number" value="${c.vigorAtual==null?calc.vigorTotal:c.vigorAtual}" data-f="vigorAtual" style="max-width:90px">
+            <span>/ ${calc.vigorTotal}</span>
+            <button class="btn mini" data-vig="+1">+</button>
+          </div>
+          <h4>Ataques</h4>
+          <div id="ataques-list">${ataquesHTML||'<p class="hint">Nenhum ataque.</p>'}</div>
+          <button class="btn mini" id="btn-add-atk">+ Ataque</button>
+          <h4>Habilidades</h4>
+          <div id="habs-list">${habsHTML||'<p class="hint">Nenhuma habilidade.</p>'}</div>
+          <button class="btn mini" id="btn-add-hab">+ Habilidade</button>
+          <h4>Condições</h4>
+          <div class="cond-grid">${condHTML}</div>
+          <h4>Notas</h4>
+          <textarea rows="4" data-f="notas" placeholder="História, aparência, sonhos...">${esc(c.notas||'')}</textarea>
+          <div class="ficha-acoes">
+            <button class="btn primario" id="btn-save">💾 Salvar ficha</button>
+            ${isGM?'<button class="btn" id="btn-view-all">👥 Ver todos os personagens</button>':''}
+          </div>
+        </div>`;
+      this.bindFicha();
+    },
+    bindFicha(){
+      const self = this, c = this.character;
+      $$('[data-f]').forEach(inp => {
+        inp.oninput = () => {
+          const f = inp.dataset.f;
+          const v = inp.type === 'number' ? Number(inp.value) : inp.value;
+          c[f] = v;
+          self.markDirty();
+        };
+      });
+      $$('[data-attr]').forEach(inp => {
+        inp.oninput = () => {
+          const k = inp.dataset.attr, f = inp.dataset.field;
+          if (!c.atr[k]) c.atr[k] = {b:0,m:0};
+          c.atr[k][f] = Number(inp.value) || 0;
+          self.markDirty();
+          clearTimeout(self._rc); self._rc = setTimeout(() => self.renderFicha(), 500);
+        };
+      });
+      $$('[data-life]').forEach(b => b.onclick = () => {
+        const calc = V.calc(c);
+        c.vidaAtual = Math.max(0, Math.min(calc.vidaTotal, (c.vidaAtual==null?calc.vidaTotal:c.vidaAtual) + Number(b.dataset.life)));
+        self.markDirty(); self.renderFicha();
+      });
+      $$('[data-vig]').forEach(b => b.onclick = () => {
+        const calc = V.calc(c);
+        c.vigorAtual = Math.max(0, Math.min(calc.vigorTotal, (c.vigorAtual==null?calc.vigorTotal:c.vigorAtual) + Number(b.dataset.vig)));
+        self.markDirty(); self.renderFicha();
+      });
+      $$('[data-atk]').forEach(inp => {
+        inp.oninput = () => {
+          const i = Number(inp.dataset.atk), f = inp.dataset.f;
+          c.ataques[i][f] = inp.type === 'number' ? Number(inp.value) : inp.value;
+          self.markDirty();
+        };
+      });
+      $$('[data-rollatk]').forEach(b => b.onclick = () => self.rollAttack(c.ataques[Number(b.dataset.rollatk)]));
+      $$('[data-delatk]').forEach(b => b.onclick = () => { c.ataques.splice(Number(b.dataset.delatk),1); self.markDirty(); self.renderFicha(); });
+      $('#btn-add-atk').onclick = () => { c.ataques = c.ataques||[]; c.ataques.push({n:'Novo ataque', dano:'1d6', bonus:0}); self.markDirty(); self.renderFicha(); };
+      $$('[data-hab]').forEach(inp => {
+        inp.oninput = () => {
+          const i = Number(inp.dataset.hab), f = inp.dataset.f;
+          c.habs[i][f] = inp.value;
+          self.markDirty();
+        };
+      });
+      $$('[data-delhab]').forEach(b => b.onclick = () => { c.habs.splice(Number(b.dataset.delhab),1); self.markDirty(); self.renderFicha(); });
+      $('#btn-add-hab').onclick = () => { c.habs = c.habs||[]; c.habs.push({n:'Nova habilidade'}); self.markDirty(); self.renderFicha(); };
+      $$('[data-cond]').forEach(inp => {
+        inp.onchange = () => {
+          c.cond = c.cond||[];
+          const nm = inp.dataset.cond;
+          if (inp.checked && !c.cond.includes(nm)) c.cond.push(nm);
+          else if (!inp.checked) c.cond = c.cond.filter(x => x !== nm);
+          self.markDirty();
+        };
+      });
+      $('#btn-save').onclick = () => self.saveNow();
+      if ($('#btn-view-all')) $('#btn-view-all').onclick = () => self.showAllChars();
+    },
+    async saveNow(){
+      const st = $('#save-status');
+      if (st) st.textContent = 'Salvando…';
+      try {
+        await S.saveCharacter(this.room.id, this.character);
+        if (st) st.textContent = '✓ Salvo';
+      } catch(e){
+        if (st) st.textContent = '✕ Erro ao salvar';
+        this.toast('Erro ao salvar: ' + e.message, true);
+      }
+    },
+    markDirty(){
+      const st = $('#save-status');
+      if (st) st.textContent = '• Editando…';
+      clearTimeout(this.saveTimer);
+      this.saveTimer = setTimeout(() => this.saveNow(), 1500);
+    },
+    async rollAttack(at){
+      const calc = V.calc(this.character);
+      const mod = calc.don + (at.bonus||0);
+      const d = V.d20(0);
+      const total = d.v + mod;
+      try {
+        await S.postFeed(this.room.id, {
+          author: this.member.name, kind:'roll',
+          payload: {label:'Ataque: ' + at.n, expr:'d20+'+mod, groups:[{e:'1d20', r:d.r}], mod, total, extra:'Dano: ' + at.dano}
+        });
+        this.toast('Rolagem enviada à mesa');
+      } catch(e){ this.toast('Erro: ' + e.message, true); }
+    },
+    renderMesa(){
+      $('#tab-content').innerHTML = `
+        <div class="mesa-wrap">
+          <div class="card">
+            <h3>Rolagens</h3>
+            <div class="dice-bar">
+              <input id="in-dice" placeholder="ex: 2d6+3, 1d20+5, 4d6kh3" style="flex:1">
+              <button class="btn primario" id="btn-roll">🎲 Rolar</button>
+            </div>
+            <div class="quick-dice">
+              <button class="btn mini" data-dice="d20">d20</button>
+              <button class="btn mini" data-dice="2d6">2d6</button>
+              <button class="btn mini" data-dice="1d8">1d8</button>
+              <button class="btn mini" data-dice="1d10">1d10</button>
+              <button class="btn mini" data-dice="1d12">1d12</button>
+              <button class="btn mini" data-dice="1d100">d100</button>
+            </div>
+          </div>
+          <div class="card feed-card">
+            <h3>Feed da mesa</h3>
+            <div id="feed" class="feed"></div>
+            <div class="chat-bar">
+              <input id="in-chat" placeholder="Mensagem para a mesa…" style="flex:1">
+              <button class="btn" id="btn-send">Enviar</button>
+            </div>
+          </div>
+        </div>`;
+      const self = this;
+      $('#btn-roll').onclick = () => {
+        const expr = $('#in-dice').value.trim();
+        if (expr) self.rollExpression(expr);
+      };
+      $('#in-dice').onkeydown = e => { if (e.key === 'Enter') $('#btn-roll').click(); };
+      $$('[data-dice]').forEach(b => b.onclick = () => {
+        $('#in-dice').value = b.dataset.dice;
+        self.rollExpression(b.dataset.dice);
+      });
+      $('#btn-send').onclick = () => self.sendChat();
+      $('#in-chat').onkeydown = e => { if (e.key === 'Enter') self.sendChat(); };
+      this.renderFeed();
+    },
+    async rollExpression(expr){
+      const r = V.rollExpr(expr);
+      if (!r) return this.toast('Expressão inválida. Ex: 2d6+3', true);
+      try {
+        await S.postFeed(this.room.id, {
+          author: this.member.name, kind:'roll',
+          payload: {label:'Rolagem', expr, groups:r.groups, mod:r.flat, total:r.total}
+        });
+        $('#in-dice').value = '';
+      } catch(e){ this.toast('Erro: ' + e.message, true); }
+    },
+    async sendChat(){
+      const text = $('#in-chat').value.trim();
+      if (!text) return;
+      try {
+        await S.postFeed(this.room.id, {author:this.member.name, kind:'chat', payload:{text}});
+        $('#in-chat').value = '';
+      } catch(e){ this.toast('Erro: ' + e.message, true); }
+    },
+    renderFeed(){
+      const el = $('#feed');
+      if (!el) return;
+      el.innerHTML = this.feed.map(item => this.feedItemHTML(item)).join('');
+      el.scrollTop = el.scrollHeight;
+    },
+    feedItemHTML(item){
+      const p = item.payload || {};
+      const time = new Date(item.created_at || Date.now()).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      if (item.kind === 'chat'){
+        return `<div class="feed-item chat"><div class="feed-head"><b>${esc(item.author_name)}</b><time>${time}</time></div><p>${esc(p.text||'')}</p></div>`;
+      }
+      const groups = (p.groups||[]).map(g => `<span>${esc(g.e)}: ${g.r.map(x=>`<span class="die">${x}</span>`).join('')}</span>`).join(' ');
+      return `<div class="feed-item roll">
+        <div class="feed-head"><b>${esc(item.author_name)}</b> • ${esc(p.label||'Rolagem')}<time>${time}</time></div>
+        <div class="roll-body"><div class="roll-total">${p.total}</div><div class="roll-detail">${groups}${p.mod?` <span class="mod">${p.mod>0?'+':''}${p.mod}</span>`:''}</div></div>
+        ${p.extra?`<div class="roll-extra">${esc(p.extra)}</div>`:''}
+      </div>`;
+    },
+    async showAllChars(){
+      try {
+        const chars = await S.getAllCharacters(this.room.id);
+        const html = chars.map(ch => {
+          const d = ch.data || {};
+          const calc = V.calc(d);
+          return `<div class="all-char"><b>${esc(d.nome||'Sem nome')}</b><div class="hint">Vida ${calc.vidaTotal} • Vigor ${calc.vigorTotal} • CA ${calc.CA} • CD ${calc.CD}</div></div>`;
+        }).join('');
+        const modal = document.createElement('div');
+        modal.className = 'modal-back';
+        modal.innerHTML = `<div class="modal"><header><h3>Personagens da mesa</h3><button class="btn mini" id="m-close">✕</button></header><div class="corpo">${html||'<p class="hint">Nenhum personagem ainda.</p>'}</div></div>`;
+        document.body.appendChild(modal);
+        modal.querySelector('#m-close').onclick = () => modal.remove();
+        modal.onclick = e => { if (e.target === modal) modal.remove(); };
+      } catch(e){ this.toast('Erro: ' + e.message, true); }
+    },
+    toast(msg, bad){
+      const t = document.createElement('div');
+      t.className = 'toast' + (bad?' bad':'');
+      t.textContent = msg;
+      $('#toasts').appendChild(t);
+      setTimeout(() => t.classList.add('sai'), 2400);
+      setTimeout(() => t.remove(), 2800);
+    }
+  };
+  window.addEventListener('DOMContentLoaded', () => A.App.init());
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+</script>
+</body>
+</html>
