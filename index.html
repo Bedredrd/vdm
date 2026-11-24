@@ -7,7 +7,380 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600;700&family=Pirata+One&display=swap">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+/* Dados de referência ampliados: regras, condições, navios, equipamentos e geradores. */
+(function(G){'use strict';const V=G.VDM;
+  V.REGRAS = [
+    ['turno', 'Turno e ações', [
+      ['Rodada', 'Cerca de 1 minuto de combate. Todos agem uma vez, em ordem de Iniciativa (teste de Agilidade no início, ordem decrescente; empate: maior Agilidade).'],
+      ['Estrutura do turno', 'Movimento (até o deslocamento) + 1 Ação + 1 Complemento + Ação Bônus (se tiver) + Ação Livre + Interação com Objeto.'],
+      ['Agilidade alta', 'A cada 10 de Agilidade, +1 Reação; a cada 25, +1 Complemento; a cada 50, +1 Ação. Deslocamento ≈ 3 m × Agilidade (mínimo 1,5 m).'],
+      ['Ações comuns', 'Atacar · Ajudar (vantagem a um aliado) · Usar Habilidade · Desengajar (sem ataque de oportunidade) · Disparar (dobra o deslocamento) · Esconder (Furtividade) · Esquivar (ataques contra você com desvantagem e vantagem em testes de Destreza até seu próximo turno) · Preparar (gatilho) · Procurar · Usar Objeto.'],
+      ['Ação Completa', 'Consome o turno inteiro (carregar canhão, técnica complexa, cirurgia em campo).'],
+      ['Impregnar', 'Uma Ação com material apropriado: ataques da arma/corpo causam +1d2 a +1d6 do tipo escolhido até o fim do próximo turno. No próprio corpo, sofre o dado mínimo.'],
+      ['Desengajar forçado', 'Desengajar como Complemento por 1d4 de Vigor.'],
+      ['Ataque de oportunidade', 'Se um inimigo sai do alcance sem Desengajar, gaste 1 de Vigor para atacar na hora.'],
+    ]],
+    ['reacoes', 'Reações', [
+      ['Quando', 'Ao ser alvo de ataque, técnica ou salvaguarda. As reações voltam no início do seu turno.'],
+      ['Desvio', 'Custa 1d4 de Vigor por nível de classe. Agilidade ×1,5 até o início do seu próximo turno. Uma vez por rodada.'],
+      ['Defesa', 'Custa 1d4 de Vigor por nível de classe. Resistência ×1,5 até o início do seu próximo turno e Vida extra igual à metade da Resistência base. Uma vez por rodada.'],
+      ['Contra-Ataque', 'Gasta o maior dado do seu dano em Vigor para atacar quem o atacou.'],
+    ]],
+    ['ca-cd', 'CA, CD e ataque', [
+      ['CA', '1 + o maior entre Agilidade e Resistência.'],
+      ['CD', 'Don + o maior entre Persistência e Disciplina. Ao impor efeitos, soma metade do atributo causador. (O guia rápido do PDF escreve "1 +" no lugar do Don; a mesa escolhe em Configurações.)'],
+      ['Ataque', 'd20 + modificador de atributo (Força para golpes brutos, Destreza para precisos ou à distância) + Don se a competência for 2 ou mais. Acerta se igual ou maior que a CA.'],
+      ['Dano', 'Dado da arma ou habilidade + metade do modificador. O tipo de dano pode ativar Ferimentos e resistências.'],
+      ['Crítico e falha', 'd20 natural 20: dano crítico (dobra os dados). d20 natural 1: falha automática.'],
+      ['Vantagem e desvantagem', 'Role 2 ou mais d20 e fique com o maior (vantagem) ou o menor (desvantagem). Acumulam.'],
+      ['À distância em corpo a corpo', 'Atacar com arma de longo alcance enquanto engajado impõe desvantagem. Cobertura pode dar bônus de CA.'],
+    ]],
+    ['testes', 'Testes e salvaguardas', [
+      ['Checagem de atributo', 'Role 1d20: sucesso se o resultado for menor ou igual ao valor do atributo. O mestre pode aplicar modificadores.'],
+      ['Salvaguarda', '1d20 + modificador do atributo apropriado contra a CD do efeito. Toda salvaguarda permite escolher entre dois atributos.'],
+      ['Aptidão', 'Soma o atributo relacionado mesmo com 0 pontos. Pontos: 0 desvantagem · 1 sem desvantagem · 2 soma o Don · 3 sem custo de Vigor · 4 Don dobrado · 5 passa 1×/dia numa falha.'],
+      ['Competência', '0 desvantagem e sem atributo · 1 normal · 2 soma o Don · 3 repete uma falha 1×/combate · 4 especialização · 5 atributo ×1,5 no acerto (100% no dano).'],
+    ]],
+    ['foco', 'Foco', [
+      ['Limite', 'Habilidades em Foco = 1 + 1 a cada 8 de Persistência. Ao exceder, a mais antiga cessa. Pode encerrar quando quiser.'],
+      ['Ao sofrer dano', 'Teste de Vontade ou Resiliência por habilidade em Foco, dificuldade 10 (ou metade do dano, se maior que 10). Falha encerra a habilidade.'],
+      ['Psíquico e noético', 'Dano psíquico dá desvantagem nos testes de Foco; dano noético encerra todos os Focos.'],
+    ]],
+    ['morte', 'Dano permanente e morrendo', [
+      ['Ferimento', 'Cair a 0 de Vida por ataque inimigo com dano cortante, perfurante ou elemental: reduz a Vida máxima pelo valor do dano.'],
+      ['Lesão', 'Cair a 0 por dano contundente, esmagamento, energético ou psíquico: reduz o Vigor máximo pelo valor do dano.'],
+      ['Feridas Profundas', 'Ferimentos somando metade ou mais da Vida: coma, morte em 1 + nível de Tenacidade dias sem socorro. Lesões somando metade ou mais do Vigor: +5 de Exaustão na hora.'],
+      ['Queda', 'Sem usar Determinação, cai Inconsciente e recebe 1 Ferimento ou Lesão. Fica estável, a menos que seja executado. Volta se curado acima de 0 PV ou após Descanso Curto (acorda com 1 de Exaustão).'],
+      ['Vontade Inquebrável', 'Determinação atual de 60% ou mais: teste de Determinação antes de cair. Sucesso: levanta no próximo turno com 1 PV, recebendo o Ferimento/Lesão e 1 de Exaustão. Falha: cai normalmente.'],
+      ['Morte', 'Execução (um turno inteiro contra um Inconsciente), dano massivo (limiar do mestre, por exemplo metade dos PV em negativo ou 1d100) ou complicações narrativas (afogamento de usuário de Akuma, coma sem tratamento).'],
+      ['Nota do PDF', 'A seção de dano permanente fala em reduzir o máximo "no valor do dano", e a de Morrendo em "1 Ferimento ou Lesão". A ficha deste site registra pontos, que você edita livremente.'],
+    ]],
+    ['descanso', 'Descansos e reservas', [
+      ['Reservas', 'Reserva de Vida: dados pela Resistência na Escala de Dados. Reserva de Vigor: dados pela Persistência. Quantidade = nível de classe. Só voltam com Descanso Completo.'],
+      ['Curto (1 a 2 h)', 'Gasta até 1 + Don dados de cada reserva (separadamente), rolando cada um para recuperar o valor.'],
+      ['Longo (8 a 12 h)', 'Só a cada 16 h. Gasta quantos dados quiser, reduz a Exaustão pela Resiliência e permite usar pontos de treino/habilidade.'],
+      ['Completo (24 h ou mais)', 'Só em calma e custa B$ 200 por personagem. Recupera Vida e Vigor, cura Ferimentos e Lesões leves, restaura as reservas e a Determinação ao valor base.'],
+      ['Emergencial (10 a 30 min)', 'Cada 1% de Determinação gasto cura 2 de Vida ou 2 de Vigor, mesmo sobre Ferimentos e Lesões. Ao fim do próximo combate, o recuperado vira Ferimentos e Lesões graves. A Determinação fica reduzida até um Descanso Completo.'],
+    ]],
+    ['clash', 'Clash', [
+      ['Como funciona', 'A qualquer momento você desafia um inimigo para colidir a Determinação: cada um revela uma habilidade e gasta o Vigor mínimo dela; ambos rolam Colisão de Determinação (1d100 + Determinação). Diferença de 10 ou menos é empate. Sem Vigor para nenhuma habilidade, faz um ataque básico.'],
+      ['Usos', 'Don vezes por combate, para cada lado. Haki do Conquistador desperto vence automaticamente quem não tem a determinação de um rei.'],
+      ['Posição', 'Depois do Clash, voltam à posição anterior. Se houve ataque corpo a corpo, ficam adjacentes; se só um atacou, o outro pode recuar 6 m sem ataque de oportunidade.'],
+      ['Clash Inicial', 'Logo após a iniciativa. Quem vence age primeiro e tem vantagem nos ataques contra o perdedor no 1º turno; dano de habilidade vai ao mínimo. Empate: maior Agilidade.'],
+      ['Clash Intermediário', 'Depois da 1ª rodada ou de perder um Clash Inicial. Habilidades sem foco em dano, junto de um ataque básico. O vencedor joga um turno extra isolado logo depois (sem contar para efeitos temporários, contadores ou reações). Empate: ambos aplicam seus efeitos.'],
+      ['Clash Final', 'Quando ambos estão no limite. Habilidades de dano: o vencedor causa dano máximo; empate, ambos levam dano máximo. Se o perdedor cair a 0, não faz o teste para se manter de pé.'],
+      ['Counter-Clash', 'Gasta um uso seu para negar o desafio. O Clash é anulado, mas o Vigor mínimo dos dois é gasto.'],
+      ['Blitz (2 usos)', 'Proposto no fim de um turno, sem Counter-Clash. Agilidade maior que Resistência: SpeedBlitz (soma Agilidade; vencedor faz o oponente perder o próximo turno e as reações até o fim do próximo turno dele). Caso contrário, TankBlitz (soma Resistência; o oponente causa metade do dano em você até o fim do próximo turno do vencedor, deslocamento dobrado ao ir até o perdedor e +1 de CA a cada 10% de Determinação). Se iguais, você escolhe.'],
+      ['Clash do Conquistador', 'Usuários de Haki do Rei podem usar no lugar do Clash Inicial ou Intermediário. A colisão soma Vontade e nível de Haki do Conquistador; no intermediário, vem junto de um ataque corpo a corpo.'],
+    ]],
+    ['atributos', 'Atributos e derivados', [
+      ['Derivados', 'Agilidade = Destreza + Velocidade · Resistência = Força + Resiliência · Persistência = Conhecimento + Vitalidade · Disciplina = Raciocínio + Vontade · Carisma = Aparência + Destino.'],
+      ['Resistência', 'A cada 8, ignora um tipo de dano simples (reduz o dano pela Resiliência).'],
+      ['Persistência', 'A cada 8, +1 habilidade em Foco (base 1).'],
+      ['Disciplina', 'A cada 2, +1 Esforço Preciso: um dado de Vigor vira seu valor mínimo. Volta no Descanso Curto.'],
+      ['Don', 'Níveis de classe 1–4: +1 · 5–8: +2 · 9–12: +3 · 13–16: +4 · 17–20: +5.'],
+      ['Determinação', 'De −100% a 100%, em múltiplos de 5, pela média entre jogador e mestre. A cada 10%, +1 ponto de atributo. Teste: d20 contra 20 − |Det/5|. Colisão: 1d100 + Determinação.'],
+      ['Sorte', '1d20 na criação (Clã D com desvantagem; Descendente de Davy Jones com desvantagem tripla; Deus Ex Machina = 20).'],
+    ]],
+    ['progressao', 'Progressão', [
+      ['A cada nível de classe (a partir do 2)', '+2 pontos de atributo, +10 Pontos de Habilidade, ganho de Vida (dado da Escala de Dados por Vitalidade + Resistência) e de Vigor (dado por Vontade + Persistência).'],
+      ['Profissão', 'Nível 1: 5 pontos de Aptidão. Do 2 em diante: +2 pontos de Aptidão por nível e 10/15/20/25 PH nos níveis 2/3/4/5.'],
+      ['Fruta', 'Níveis ímpares dão Competência 1 a 5 com a fruta; níveis pares dão 20/40/60/80 PH só para a fruta; nível 10 é o Semi-Despertar.'],
+    ]],
+    ['dano-escala', 'Escalas de dano e de dados', [
+      ['Escala de Dano', '1 → 1d2 → 1d3 → 1d4 → 1d6 → 1d8 → 1d10 → 1d12 → 1d12+1d4 → 1d12+1d6 … Com vários dados vale o mesmo (6d6 → 6d8 → 6d10 → 6d12 → 6d12+1d4).'],
+      ['Escala de Dados', 'Atributo → dado: 1–2 1d2 · 3–4 1d4 · 5–6 1d6 · 7–8 1d8 · 9–10 1d10 · 11–12 2d6 · 13–14 1d8+1d6 · 15–16 2d8 · 17–18 1d10+1d8 · 19–20 2d10 (0 vale 1; negativo vale 0).'],
+    ]],
+  ];
+  V.CONDICOES = [
+    ['Afogado', 'Submerso (usuário de Fruta): deslocamento 0. Segura o fôlego por turnos iguais à Resiliência; depois sofre 1d6 de afogamento no início de cada turno. Falha automática em testes de Vitalidade e Resiliência; não fala nem usa habilidades que exigem respiração.'],
+    ['Agarrado', 'Deslocamento 0 e sem bônus de deslocamento. Termina se quem agarra ficar Incapacitado ou se algo afastar o alvo do agarrão.'],
+    ['Amedrontado', 'Desvantagem em testes de Atributo e ataques enquanto vê a causa do medo; não pode se aproximar dela por vontade própria.'],
+    ['Atordoado', 'Incapacitado, não se move, só balbucia. Falha automática em salvaguardas de Força, Destreza, Velocidade e Resistência. Ataques contra ele têm vantagem.'],
+    ['Caído', 'Só rasteja (ou se levanta, gastando metade do deslocamento). Desvantagem nos próprios ataques. Ataques contra ele têm vantagem se o atacante estiver a até 5 pés; senão, desvantagem.'],
+    ['Cego', 'Não enxerga; falha em testes que dependem de visão. Ataques contra ele têm vantagem; os dele têm desvantagem.'],
+    ['Chamuscado', 'Dano ígneo no início de cada turno até apagar o fogo. Até 1d6 por turno: Complemento e teste de Destreza ou Resiliência CD 10. Acima de 1d6: uma Ação, água/capa/cobertor e teste de Destreza CD 15 (falha perde o material e o fogo continua).'],
+    ['Contido', 'Deslocamento 0. Ataques contra ele têm vantagem; os dele têm desvantagem. Desvantagem em salvaguardas de Destreza e Velocidade.'],
+    ['Enfeitiçado', 'Não pode atacar nem mirar com dano quem o enfeitiçou. Quem enfeitiçou tem vantagem em testes sociais contra ele.'],
+    ['Enfraquecido', 'Desvantagem em salvaguardas e testes de Força, Destreza, Vitalidade, Vontade, Velocidade e Resiliência.'],
+    ['Envenenado', 'Dano venenoso no início de cada turno até curar, remover a fonte ou receber antídoto. O dano depende do veneno.'],
+    ['Exposição', 'Recebe o valor indicado como dano adicional de qualquer fonte pela duração (Exposição 2 + golpe de 3 = 5 de dano).'],
+    ['Exaustão', 'Dez níveis. Cada nível dá penalidade igual ao nível em todo d20, na CD, em Agilidade e em Resistência. Acima de 10 é morte. Descanso longo remove níveis iguais à Vitalidade ou Resiliência; descanso pleno zera (com comida e água).'],
+    ['Desorientado', 'Desvantagem em ataques e testes de Atributo até o fim do próximo turno. No início dele, teste de Resiliência CD 10 encerra.'],
+    ['Incapacitado', 'Não realiza ações nem reações.'],
+    ['Inconsciente', 'Incapacitado, não se move nem fala, larga o que segura e cai. Falha automática em salvaguardas de Força, Destreza, Velocidade e Resiliência. Ataques têm vantagem; acerto a até 5 m é crítico.'],
+    ['Invisível', 'Só é percebido por Haki da Observação ou sentido especial; fortemente obscurecido (som e rastros o denunciam). Ataques contra ele têm desvantagem; os dele têm vantagem.'],
+    ['Intoxicado', 'Desvantagem em ataques e testes de Atributo.'],
+    ['Lentidão', 'Deslocamento reduzido por efeito temporário ou permanente (o valor varia). É uma Condição Debilitante.'],
+    ['Paralisado', 'Incapacitado, não se move nem fala. Falha automática em salvaguardas de Força, Destreza, Velocidade e Resiliência. Ataques têm vantagem; acerto a até 5 m é crítico.'],
+    ['Petrificado', 'Vira pedra (peso ×10, para de envelhecer). Incapacitado e inconsciente do entorno; ataques têm vantagem; falha automática em Força, Destreza, Velocidade e Resiliência. Resistência a todo dano; imune a veneno e doenças (suspendidos, não curados).'],
+    ['Provocado', 'Obrigado a atacar o alvo da provocação da melhor forma; não se afasta dele por vontade própria e usa o movimento para se aproximar.'],
+    ['Queimadura Química', '1d4 de dano ácido no início de cada turno e deslocamento −3 m. Como Ação, teste de Medicina ou Resiliência CD 12 trata e encerra.'],
+    ['Sangramento', 'Pontos cumulativos: com N pontos, sofre N de dano no início de cada turno. Termina ao curar ao menos 1 de Vida ou com teste de Medicina CD 8 + o dobro dos pontos atuais (médicos testam com vantagem).'],
+    ['Surdo', 'Não ouve; falha em testes de Atributo que dependem da audição.'],
+  ];
+  V.NAVIOS = [
+    ['Saveiro', 'P', 0.5, 3, 15, 0, 60, 1, 10], ['Caravela', 'P', 1, 5, 15, 1, 70, 2, 10], ['Lugre', 'P', 1, 8, 16, 1, 80, 2, 10],
+    ['Escuna', 'M', 2, 10, 15, 5, 100, 3, 12], ['Corsário', 'M', 9, 10, 17, 8, 150, 4, 12], ['Galé', 'M', 3, 50, 9, 2, 100, 2, 14],
+    ['Saveiro de Brigada', 'M', 10, 80, 15, 5, 180, 4, 14], ['Fragata', 'M', 20, 150, 12, 10, 400, 8, 15],
+    ['Bergantim', 'G', 8, 100, 13, 6, 260, 5, 16], ['Veleiro', 'G', 3, 120, 19, 4, 140, 2, 16], ['Naus', 'G', 10, 160, 8, 2, 400, 8, 16],
+    ['Galeão', 'GG', 35, 450, 16, 30, 600, 20, 18], ['Caravela (GG)', 'GG', 50, 800, 10, 40, 800, 15, 18],
+    ['Submarino (P)', 'P', 5, 20, 20, 2, 140, 10, 19], ['Submarino', 'M', 15, 80, 25, 6, 300, 20, 20],
+  ];
+  V.NAVIO_COLS = ['Tipo', 'Tam.', 'Carga (ton)', 'Tripulação', 'Velocidade (nós)', 'Canhões', 'Vida', 'Resistência', 'CA'];
+  V.MANOBRAS = [
+    ['Virada Brusca', 'Destreza ou Conhecimento, CD 14', 14, 'Gira o navio sem custo de movimento. Indisponível para navios GG.'],
+    ['Fuga Desesperada', 'Conhecimento, CD 15', 15, 'Sucesso: +3 nós neste turno (+2 para GG). Falha: perde 1 nó.'],
+    ['Disparada Reta', 'sem teste', 0, '+4 nós, mas o navio não ataca neste turno.'],
+    ['Investida de Abordagem', 'Destreza, CD 16', 16, 'Sucesso: entra em posição de abordagem. Não serve a navios GG (sem ancorar ou parar).'],
+    ['Curva Larga com Velas Estendidas', 'sem teste', 0, 'Curva aberta com o vento: +1 quadrado no próximo turno se mantiver a direção (+2 para navios P).'],
+  ];
+  V.REGRAS_NAVAL = [
+    ['Escala', 'Cada quadrado do grid é 1 milha náutica (1 nó); cada rodada dura 1 minuto. Cada nó permite mover 1 quadrado por turno.'],
+    ['Iniciativa', 'Por navio: 1d20 + Conhecimento + nível de profissão (Navegador, Timoneiro ou Capitão), valendo o maior valor.'],
+    ['Ações', 'Manobrar (1 por turno, com teste do navegador/timoneiro), Locomover (quadrados = nós), Atacar (artilheiro dispara canhões/torpedos com jogada de ataque padrão), Abordar, Fugir.'],
+    ['Abordar', 'O navio alvo deve estar a 1 nó e a tripulação precisa de uma manobra de aproximação, como a Investida de Abordagem. Depois, o combate segue no grid tático.'],
+    ['Fugir', 'Começar a 4 nós ou mais do inimigo, fazer uma manobra de fuga e manter mais de 4 nós por dois turnos seguidos.'],
+    ['Canhões', 'Levam 1 turno para recarregar depois de disparar. Atacam com os bônus do tripulante de melhor competência em canhões, contra a CA do navio alvo.'],
+    ['Reações', 'Aparar Ataques (Potencial Sobre-Humano ou maior): gasta o Vigor mínimo de um ataque/habilidade e faz salvaguarda contra o valor de acerto do ataque inimigo; sucesso anula o impacto na região. Defender: defesas improvisadas ou escudos, a critério do mestre.'],
+  ];
+  V.EVENTOS_MAR = [
+    'Calmaria total: o vento some por um dia e as provisões pesam.', 'Tempestade repentina: teste de Navegação para manter o curso.', 'Navio da Marinha à vista, ainda sem ter notado vocês.',
+    'Bando de piratas rivais pede passagem, ou briga.', 'Mar de névoa densa: avistar qualquer coisa é difícil.', 'Redemoinho gigante se forma à frente.', 'Destroços recentes de um naufrágio, com sobrevivente agarrado a uma tábua.',
+    'Monstro marinho segue o casco, curioso (ou faminto).', 'Ilha sem registro nos mapas aparece no horizonte.', 'Mercador viajante oferece uma troca estranha.', 'Correnteza forte puxa o navio para fora da rota.', 'Garrafa com mapa parcial boiando.',
+    'Doença a bordo: alguém da tripulação está febril.', 'Cometa ou fenômeno no céu que o Log Pose não explica.', 'Comida estragou nos barris: racionamento.', 'Ave mensageira cai exausta no convés com um recado.',
+    'Banco de recifes escondido sob a água rasa.', 'Navio fantasma, sem tripulação visível.', 'Arauto de uma recompensa nova: cartaz com o rosto de alguém do grupo.', 'Pescadores locais avisam sobre uma ilha a evitar.',
+  ];
+  V.NOMES_A = ['Barba', 'Cabo', 'Dente', 'Espinho', 'Ferro', 'Gancho', 'Lâmina', 'Maré', 'Olho', 'Pólvora', 'Sal', 'Tubarão', 'Trovão', 'Vela', 'Zarpa', 'Âncora', 'Bússola', 'Corvo', 'Faísca', 'Rum'];
+  V.NOMES_B = ['Negra', 'Torta', 'Vermelho', 'Cego', 'Doce', 'Dourado', 'Louca', 'Manco', 'Mudo', 'Rápido', 'Sorridente', 'Tonto', 'Velho', 'do Norte', 'das Ondas', 'da Cicatriz', 'do Leme', 'de Ferro'];
+  V.NOMES_P = ['Ardan', 'Bela', 'Cesar', 'Dara', 'Eron', 'Fiona', 'Gael', 'Hana', 'Ivo', 'Jade', 'Kaito', 'Lena', 'Milo', 'Nara', 'Otto', 'Pia', 'Quin', 'Rafa', 'Sora', 'Tadeu', 'Uma', 'Vito', 'Wen', 'Yara', 'Zeca'];
+  V.POTENCIAIS = [
+    { id: 'humano', n: 'Humano / Comum', v: [3, 3, 2, 2, 1, 1, 0, 0, 0, 
+   V.NIVEL_PROF = [[1, 'Característica básica; 5 pts de Aptidão'], [2, 'Característica; 10 PH'], [3, 'Característica; 15 PH'], [4, 'Característica; 20 PH'], [5, 'Domínio da profissão; 25 PH']];
+  V.NIVEL_FRUTA = [[1, 'Poderes básicos; Competência 1 com a fruta'], [2, '20 PH só para a fruta'], [3, 'Competência 2'], [4, '40 PH só para a fruta'], [5, 'Competência 3'], [6, '60 PH só para a fruta'], [7, 'Competência 4'], [8, '80 PH só para a fruta'], [9, 'Competência 5'], [10, 'Semi-Despertar']];
+  V.HAB_MUNDO = [
+    ['Agarrar', 5], ['Derrubar', 5], ['Superioridade Moral', 5], ['Cegar', 10], ['Desarmar', 10], ['Distração de Combate', 10], ['Movimento Atlético', 10], ['Adestrar Animais', 10],
+    ['Aparar', 15], ['Intimidar', 15], ['Rankyaku', 15], ['Soru', 12], ['Tekkai', 12], ['Avanço Cortante', 12], ['Passo Furtivo', 12], ['Passo Reativo', 12],
+    ['Ataque Carregado', 20], ['Geppo', 20], ['Kami-e', 20], ['Ataque Armado a Distâncias', 20], ['Animal de Estimação', 0], ['Shigan', 0],
+  ];
+  V.MODELOS_NPC = [
+    { id: 'marinheiro', n: 'Marinheiro recruta', classe: 'espadachim', nivel: 1, pot: 'humano', ord: 'fis', prof: 'Marinheiro', atq: ['Sabre', 'FOR', '1d8', 'cortante', 1], x: 'Soldado raso da Marinha.' },
+    { id: 'fuzileiro', n: 'Fuzileiro da Marinha', classe: 'atirador', nivel: 2, pot: 'humano', ord: 'mira', prof: 'Marinheiro', atq: ['Rifle', 'DES', '1d10', 'perfurante', 2], x: 'Atira de longe, em formação.' },
+    { id: 'pirata', n: 'Pirata de bando', classe: 'lutador', nivel: 1, pot: 'humano', ord: 'fis', prof: 'Combatente', atq: ['Cutelo', 'FOR', '1d6', 'cortante', 1], x: 'Bandido de convés, valente em bando.' },
+    { id: 'valentao', n: 'Valentão', classe: 'lutador', nivel: 3, pot: 'sobre', ord: 'fis', prof: 'Combatente', atq: ['Clava', 'FOR', '1d6', 'concussão', 2], x: 'Brutamontes que lidera capangas.' },
+    { id: 'cacador', n: 'Caçador de recompensas', classe: 'espadachim', nivel: 4, pot: 'sobre', ord: 'agil', prof: 'Caçador de Recompensas', atq: ['Katana', 'DES', '1d8', 'cortante', 3], x: 'Rastreia alvos com recompensa.' },
+    { id: 'oficial', n: 'Oficial da Marinha', classe: 'artista_marcial', nivel: 5, pot: 'sobre', ord: 'fis', prof: 'Marinheiro', atq: ['Sabre', 'DES', '1d8', 'cortante', 3], x: 'Comanda uma tropa e conhece técnicas de Rokushiki.' },
+    { id: 'assassino', n: 'Assassino de aluguel', classe: 'assassino', nivel: 4, pot: 'sobre', ord: 'agil', prof: 'Exótico', atq: ['Adaga', 'DES', '1d4', 'perfurante', 3], x: 'Ataca de surpresa e some.' },
+    { id: 'capitao', n: 'Capitão de bando', classe: 'guerrilheiro', nivel: 6, pot: 'monstro', ord: 'chef', prof: 'Capitão', atq: ['Machado de Batalha', 'FOR', '1d8', 'cortante', 4], x: 'Chefe de uma tripulação com recompensa alta.' },
+  ];
+  V.EQUIP = {"armas":[{"g":"Armas Brancas","n":"Adagas","d":"1d4 perfurante","p":"0,5 kg","x":"Acuidade, arremesso(6m), leve, rapidez"},{"g":"Armas Brancas","n":"Chicotes / Correntes","d":"1d6 cortante","p":"1 kg","x":"Acuidade, alcance(3m), precisa"},{"g":"Armas Brancas","n":"Machado de Batalha","d":"1d8 cortante","p":"2 kg","x":"Versátil (1d10), brutal (1)"},{"g":"Armas Brancas","n":"Machado Grande","d":"1d12 cortante","p":"3,5 kg","x":"Duas mãos, lentidão, brutal (2)"},{"g":"Armas Brancas","n":"Foices","d":"1d8 cortante","p":"2 kg","x":"Acuidade, versátil(1d10), brutal (2)"},{"g":"Armas Brancas","n":"Cutelo / Machete / Facão","d":"1d6 cortante","p":"1,5 kg","x":"Leve, brutal (1)"},{"g":"Armas Brancas","n":"Cimitarras / Kukri / Alfange / Messer","d":"1d8 cortante","p":"1,5 kg","x":"Acuidade, precisão"},{"g":"Armas Brancas","n":"Sabres","d":"1d8 cortante","p":"1,5 kg","x":"Acuidade, versátil(1d10)"},{"g":"Armas Brancas","n":"Katanas","d":"1d8 cortante","p":"1 kg","x":"Acuidade, versátil(1d10), precisa"},{"g":"Armas Brancas","n":"Odachi / Nodachi","d":"2d6 cortante","p":"3 kg","x":"Acuidade, duas mãos, lentidão, pesada"},{"g":"Armas Brancas","n":"Espada Curta / Gládio","d":"1d6 cortante","p":"1,5 kg","x":"Leve, rapidez"},{"g":"Armas Brancas","n":"Espada Bastarda","d":"1d8 cortante","p":"2 kg","x":"Versátil(1d10)"},{"g":"Armas Brancas","n":"Claymore / Espada Longa","d":"2d6 cortante","p":"3,5 kg","x":"Duas mãos, lentidão"},{"g":"Armas Brancas","n":"Montante / Zweihander","d":"2d8 cortante","p":"4 kg","x":"Duas mãos, lentidão, pesada"},{"g":"Armas Brancas","n":"Clavas / Maças / Morningstar","d":"1d6 concussão","p":"2 kg","x":"Versátil(1d8)"},{"g":"Armas Brancas","n":"Clava Grande / Maça Grande / Kanabō","d":"1d12 concussão","p":"4 kg","x":"Duas mãos, brutal (1)"},{"g":"Armas Brancas","n":"Martelo-de-guerra","d":"1d10 concussão","p":"3 kg","x":"Versátil(1d12)"},{"g":"Armas Brancas","n":"Mangual","d":"1d8 concussão","p":"2 kg","x":"Alcance(2m), acuidade"},{"g":"Armas Brancas","n":"Lanças / Piques / Tridente","d":"1d8 perfurante","p":"2,5 kg","x":"Acuidade, arremesso(9m), versátil(1d10)"},{"g":"Armas Brancas","n":"Alabardas / Glaives","d":"1d10 cortante","p":"3 kg","x":"Duas mãos, alcance(3m)"},{"g":"Armas Brancas","n":"Bordão / Bastão","d":"1d6 concussão","p":"1,5 kg","x":"Versátil(1d8)"},{"g":"Armas Brancas","n":"Rapieira / Floretes","d":"1d8 perfurante","p":"1 kg","x":"Acuidade, precisão"},{"g":"Armas a Distância","n":"Fundas","d":"1d6 concussão","p":"0,2 kg","x":"Médio alcance (15/45m), munição, leve"},{"g":"Armas a Distância","n":"Estilingues","d":"1d6 perfurante","p":"0,5 kg","x":"Curto alcance (10/30m), munição"},{"g":"Armas a Distância","n":"Zarabatana","d":"1d4 perfurante","p":"0,5 kg","x":"Silenciosa, curto alcance (9/27m), munição leve"},{"g":"Armas a Distância","n":"Arco","d":"1d8 perfurante","p":"1 kg","x":"Longo alcance (30/90m), silencioso, munição, duas mãos"},{"g":"Armas a Distância","n":"Besta de Mão","d":"1d6 perfurante","p":"1,5 kg","x":"Curto alcance (15/30m), munição, recarga"},{"g":"Armas a Distância","n":"Besta Pesada / Balestra","d":"1d10 perfurante","p":"4,5 kg","x":"Longo alcance (30/120m), munição, recarga, duas mãos"},{"g":"Armas a Distância","n":"Pistolas","d":"1d8 perfurante","p":"0,5 kg","x":"Médio alcance (20/60m), munição, recarga"},{"g":"Armas a Distância","n":"Rifles","d":"1d10 perfurante","p":"1 kg","x":"Longo alcance (40/120m), munição, recarga, duas mãos"},{"g":"Armas a Distância","n":"Rifles de Precisão","d":"1d12 perfurante","p":"1,5 kg","x":"Longo alcance+ (60/180m), recarga, duas mãos, desvantagem a curta distância"},{"g":"Armas a Distância","n":"Espingardas","d":"2d6 concussão","p":"1,5 kg","x":"Curto alcance (15/30m), dispersão (acerta até 2 alvos adjacentes), recarga"},{"g":"Armas a Distância","n":"Bazucas","d":"2d12 explosivo","p":"3,5 kg","x":"Alcance médio (30/90m), explosivo (área), recarga lenta"},{"g":"Armas a Distância","n":"Canhões","d":"4d10 explosivo","p":"500 kg","x":"Montado, longo alcance (60/300m), munição pesada, recarga manual"},{"g":"Armas Exóticas","n":"Bombas de Fumaça","d":"","p":"0,5 kg","x":"Cobre área de 3m² com fumaça densa por 1 turno"},{"g":"Armas Exóticas","n":"Corrente com Gancho","d":"1d6 cortante","p":"2 kg","x":"Acuidade, alcance(3m), pode puxar objetos ou criaturas"},{"g":"Armas Exóticas","n":"Estrepes e Semelhantes","d":"1d4 perfurante","p":"1 kg","x":"Área (2x2m), causa dano ao pisar e reduz deslocamento"},{"g":"Armas Exóticas","n":"Redes (de captura/pesca)","d":"","p":"2 kg","x":"Alcance(3m), imobiliza alvo médio ou menor (teste de Força p/ escapar)"},{"g":"Armas Exóticas","n":"Arpões","d":"1d8 perfurante","p":"2 kg","x":"Arremesso (15/30m), pode prender alvo com corrente"},{"g":"Armas Exóticas","n":"Shuriken / Kunai","d":"1d4 perfurante","p":"0,2 kg","x":"Arremesso (10/30m), acuidade, leve, silenciosa, rapidez"},{"g":"Armas Exóticas","n":"Kusarigama","d":"1d6 cortante","p":"1,5 kg","x":"Acuidade, alcance (3m), arma dupla"},{"g":"Armas Exóticas","n":"Macuahuitl","d":"1d10 cortante","p":"3 kg","x":"Versátil (1d12), brutal (3)"}],"ferramentas":[{"n":"Soco Inglês","b":"100","p":"0,3 kg","x":"+1 em dano desarmado, não conta como arma"},{"n":"Arma Especializada","b":"","p":"Variável","x":"Usada apenas por Especialistas, efeitos customizáveis"},{"n":"Arma Personalizada","b":"","p":"Variável","x":"Atributos customizáveis, pode evoluir"},{"n":"Ferramenta Personalizada","b":"","p":"Variável","x":"Propriedades únicas criadas pelo jogador"},{"n":"Discos (Dials)","b":"250","p":"0,5 kg","x":"Funções variadas: impacto, vento, som, calor etc."},{"n":"Explosivos","b":"300","p":"0,5 kg","x":"Área (3m), dano em área (2d6), requer acendimento"},{"n":"Armadilhas","b":"200","p":"1 kg","x":"Causa efeitos ou dano ao ser acionada (varia por tipo)"},{"n":"Marionetes / Bonecos de Fio","b":"150","p":"1 kg","x":"Pode ser usado como distração ou controle indireto"},{"n":"Kit de Disfarce","b":"80","p":"1 kg","x":"Permite mudanças visuais, testes de Enganação com vantagem"},{"n":"Kit de Primeiros Socorros","b":"120","p":"1 kg","x":"Recupera até 2d6 de vida fora de combate, 3 usos"},{"n":"Instrumento Musical","b":"60","p":"1 kg","x":"Necessário para habilidades de Bardo/Músico"},{"n":"Instrumentos de Cozinha","b":"50","p":"2 kg","x":"Permite criar refeições que restauram atributos"},{"n":"Instrumentos de Pintura","b":"40","p":"1,5 kg","x":"Pode criar selos, bandeiras, ou alterar aparência de objetos"},{"n":"Instrumentos de Navegação","b":"200","p":"1 kg","x":"Necessário para navegação precisa no mar aberto"},{"n":"Ferramentas de Carpintaria","b":"100","p":"2,5 kg","x":"Usado para reparos de navios e construções"},{"n":"Ferramentas de Engenharia","b":"120","p":"2,5 kg","x":"Pode desmontar, construir e consertar máquinas simples"},{"n":"Ferramentas Médicas","b":"150","p":"1,5 kg","x":"Necessárias para tratar lesões e ferimentos graves"},{"n":"Ferramentas de Ferreiro / Armeiro","b":"180","p":"3 kg","x":"Forjar, reparar ou aprimorar armas e armaduras"},{"n":"Fornalha / Forja","b":"300","p":"6 kg","x":"Requer tempo e local fixo, usada em criação e fusão"},{"n":"Kit de Manutenção de Armas Brancas","b":"100","p":"1,5 kg","x":"Afia, limpa e conserva lâminas, recupera uso de armas"},{"n":"Kit de Manutenção de Armas de Fogo","b":"120","p":"2 kg","x":"Remove falhas, lubrifica e calibra armas de fogo"},{"n":"Kit de Ourives","b":"200","p":"1,5 kg","x":"Usado para joias, miniaturas e objetos delicados"},{"n":"Kit de Química","b":"160","p":"2 kg","x":"Combina reagentes e cria compostos simples"},{"n":"Kit de Escultura","b":"80","p":"2 kg","x":"Permite esculpir em madeira, pedra ou argila"},{"n":"Kit de Arrombamento","b":"90","p":"0,5 kg","x":"Permite abrir fechaduras, vantagem em testes de arrombamento"},{"n":"Den Den Mushi","b":"300","p":"1,5 kg","x":"Comunicação padrão, limitado a chamadas de voz"},{"n":"Baby Den Den Mushi","b":"200","p":"0,7 kg","x":"Versão pessoal portátil do Den Den"},{"n":"Den Den Mushi Visual","b":"400","p":"2 kg","x":"Comunicação com imagem e som"},{"n":"Câmera ou Luneta","b":"150","p":"1,5 kg","x":"Tira fotos ou observa com longo alcance"}],"armaduras":[{"g":"Armaduras Pesadas","n":"Peitoral de Aço","b":450,"p":"10","x":"+2 Resistência, -2 Agilidade, Desvantagem em Furtividade"},{"g":"Armaduras Pesadas","n":"Armadura de Escamas","b":400,"p":"9","x":"+2 Resistência, -1 Agilidade, Desvantagem em Furtividade"},{"g":"Armaduras Pesadas","n":"Placas Articuladas","b":500,"p":"11","x":"+2 Resistência, -1 Agilidade, -1 Persistência, impõe ruído ao andar"},{"g":"Armaduras Médias","n":"Couro Endurecido","b":250,"p":"6","x":"+1 Resistência, -1 Carisma, aparência robusta"},{"g":"Armaduras Médias","n":"Manto Reforçado","b":200,"p":"4","x":"+1 Disciplina, nenhuma penalidade"},{"g":"Armaduras Leves","n":"Casaco Naval de Comando","b":180,"p":"3","x":"+1 Aparência, vantagem social entre marinheiros"},{"g":"Armaduras Leves","n":"Colete de Fibra Leve","b":160,"p":"2.5","x":"Resistência a um tipo dano físico, permite movimentos ágeis"},{"g":"Roupas e Mantos","n":"Jaqueta Cerimonial","b":220,"p":"2","x":"+2 Aparência, não fornece defesa real"},{"g":"Roupas e Mantos","n":"Uniforme Real de Gala","b":300,"p":"3","x":"+2 Aparência, vantagem em interações formais"},{"g":"Roupas e Mantos","n":"Manto de Fumaça Quente","b":350,"p":"3.5","x":"Resistência a frio, leve dissipação de fumaça"},{"g":"Roupas e Mantos","n":"Roupa Científica Isolada","b":400,"p":"4","x":"Resistência a calor/choque, requer manutenção"},{"g":"Escudos","n":"Escudo Pequeno","b":120,"p":"2","x":"Proteção 1, -1 de dano recebido por ataques físicos"},{"g":"Escudos","n":"Escudo Médio","b":180,"p":"3.5","x":"Proteção 2, -2 de dano recebido por todos os tipos de dano -1 Agilidade"},{"g":"Escudos","n":"Escudo Grande","b":250,"p":"5.5","x":"Proteção 3, -3 de dano recebido por todos os tipos de dano, -2 Agilidade"}]};
+})(typeof globalThis!=='undefined'?globalThis:window);
+
+
+/* =========================================================================
+   EXPANSÃO VDM — Mundo, Regras, Geradores, Navios e Combate
+   Mantém a aplicação/Supabase original. Os estados compartilhados são
+   publicados como snapshots no feed já existente (sem exigir novas tabelas).
+   Notas secretas do mestre ficam somente no navegador do mestre.
+   ========================================================================= */
+(function(G){
+  'use strict';
+  const A=G.APP, V=G.VDM, S=A.Store, App=A.App;
+  const $=(s,r)=> (r||document).querySelector(s);
+  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
+  const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const isGM=()=>!!(App.member&&App.member.role==='gm');
+  const worldTypes=[['npc','NPCs'],['lugar','Lugares'],['faccao','Facções'],['missao','Missões'],['nota','Diário'],['handout','Handouts'],['navio','Navios']];
+  const secretKey=()=>`vdm:segredos:${App.room?App.room.id:'solo'}`;
+  const secrets=()=>{try{return JSON.parse(G.localStorage.getItem(secretKey())||'{}')}catch(e){return {}}};
+  const saveSecrets=o=>{try{G.localStorage.setItem(secretKey(),JSON.stringify(o))}catch(e){}};
+  const gmWorldKey=()=>`vdm:mundo-mestre:${App.room?App.room.id:'solo'}`;
+  const loadGMWorld=()=>{try{return JSON.parse(G.localStorage.getItem(gmWorldKey())||'[]')}catch(e){return []}};
+  const saveGMWorld=a=>{try{G.localStorage.setItem(gmWorldKey(),JSON.stringify(a))}catch(e){}};
+  const mergeWorld=(priv,pub)=>{const map=new Map((priv||[]).map(x=>[x.id,x]));(pub||[]).forEach(x=>{if(!map.has(x.id))map.set(x.id,Object.assign({visible:true},x));});return Array.from(map.values())};
+  const initialCombat=()=>({active:false,round:1,turn:'',items:[]});
+  App.extraState={world:[],combat:initialCombat(),worldType:'npc',ruleQuery:'',ruleSection:'all'};
+  App.receiveExtra=function(item){
+    if(!item||!item.payload)return;
+    if(item.kind==='vdm_world_state'){const pub=Array.isArray(item.payload.items)?item.payload.items:[];this.extraState.world=isGM()?mergeWorld(loadGMWorld(),pub):pub.map(x=>Object.assign({visible:true},x));if(this.tab==='mundo')this.renderTab();}
+    if(item.kind==='vdm_combat_state'){this.extraState.combat=Object.assign(initialCombat(),item.payload.data||{});if(this.tab==='combate')this.renderTab();}
+  };          
+const oldSub=S.subscribeFeed;
+  S.subscribeFeed=function(code,cb){return oldSub.call(this,code,item=>{App.receiveExtra(item);cb(item);});};
+  const oldEnter=App.enterRoom;
+  App.enterRoom=async function(code,member){
+    await oldEnter.call(this,code,member);
+    const feed=this.feed||[];
+    const w=feed.filter(x=>x.kind==='vdm_world_state').pop();
+    const c=feed.filter(x=>x.kind==='vdm_combat_state').pop();
+    const pubWorld=w&&w.payload&&Array.isArray(w.payload.items)?w.payload.items:[];this.extraState.world=isGM()?mergeWorld(loadGMWorld(),pubWorld):pubWorld.map(x=>Object.assign({visible:true},x));
+    this.extraState.combat=Object.assign(initialCombat(),c&&c.payload&&c.payload.data||{});
+    this.renderTab();
+  };
+  App.saveWorldState=async function(){
+    if(!isGM())return this.toast('Somente o mestre pode editar o Mundo.',true);
+    const items=this.extraState.world.map(x=>({id:x.id,type:x.type,name:x.name,description:x.description||'',status:x.status||'',model:x.model||'',crew:x.crew||'',visible:!!x.visible}));
+    saveGMWorld(items);
+    const publicItems=items.filter(x=>x.visible).map(x=>({id:x.id,type:x.type,name:x.name,description:x.description,status:x.status,model:x.model,crew:x.crew,visible:true}));
+    try{await S.postFeed(this.room.id,{author:this.member.name,kind:'vdm_world_state',payload:{items:publicItems,updatedAt:Date.now()}});this.extraState.world=items;this.toast('Mundo salvo. Itens revelados foram sincronizados com a mesa.');}
+    catch(e){this.toast('Não foi possível sincronizar o Mundo: '+e.message,true);}
+  };
+  App.saveCombatState=async function(){
+    if(!isGM())return this.toast('Somente o mestre pode controlar o combate.',true);
+    const data=JSON.parse(JSON.stringify(this.extraState.combat));
+    try{await S.postFeed(this.room.id,{author:this.member.name,kind:'vdm_combat_state',payload:{data,updatedAt:Date.now()}});this.extraState.combat=data;}
+    catch(e){this.toast('Não foi possível salvar o combate: '+e.message,true);}
+  };
+  App.renderMundo=function(){
+    const state=this.extraState, type=state.worldType||'npc', list=state.world.filter(x=>x.type===type), gm=isGM(), sec=secrets();
+    const typeLabel=(worldTypes.find(x=>x[0]===type)||[])[1]||'Mundo';
+    const cards=list.length?list.map(x=>`<article class="cartao"><header><h4>${esc(x.name)}</h4><span class="tag">${gm?(x.visible?'Revelado':'Oculto')+' · ':''}${esc(x.status||typeLabel)}</span></header><p class="texto">${esc(x.description||'Sem descrição pública.')}</p>${gm&&sec[x.id]?`<details class="segredo"><summary>Nota privada do mestre</summary><p class="texto">${esc(sec[x.id])}</p></details>`:''}${gm?`<div class="acoes"><button class="btn mini" data-world-edit="${esc(x.id)}">Editar</button><button class="btn mini ghost" data-world-toggle="${esc(x.id)}">${x.visible?'Ocultar':'Revelar'}</button><button class="btn mini ghost" data-world-secret="${esc(x.id)}">Nota privada</button><button class="btn mini perigo" data-world-del="${esc(x.id)}">Excluir</button></div>`:''}</article>`).join(''):'<div class="vazio"><h4>Nenhum registro nesta seção</h4><p>Adicione ilhas, personagens, organizações, missões e outros elementos da campanha.</p></div>';
+    const shipRows=V.NAVIOS.map(row=>`<tr>${row.map((v,i)=>`<${i===0?'th':'td'}>${esc(v)}</${i===0?'th':'td'}>`).join('')}</tr>`).join('');
+    $('#tab-content').innerHTML=`<header class="tab-cab"><h2>Mundo</h2>${gm?'<button class="btn primario" id="world-add">＋ Novo registro</button>':''}</header>
+      <nav class="subabas">${worldTypes.map(([id,label])=>`<button class="subaba ${type===id?'on':''}" data-world-type="${id}">${label} <small>${state.world.filter(x=>x.type===id).length}</small></button>`).join('')}</nav>
+      <section class="card"><div class="barra-busca"><input id="world-search" type="search" placeholder="Buscar em ${typeLabel.toLowerCase()}…"><span class="dica">${gm?'Registros ocultos ficam no navegador do mestre; use Revelar para compartilhar.':'Você vê os registros publicados pelo mestre.'}</span></div><div class="cards" id="world-cards">${cards}</div></section>
+      <section class="card"><h3>Tabela de navios</h3><p class="dica">Características dos modelos de embarcação disponíveis no sistema.</p><div class="tabela-wrap"><table class="tabela"><thead><tr>${V.NAVIO_COLS.map(x=>`<th>${esc(x)}</th>`).join('')}</tr></thead><tbody>${shipRows}</tbody></table></div>
+      <h3 class="sub">Regras navais</h3><div class="lista-simples">${V.REGRAS_NAVAL.map(x=>`<p><b>${esc(x[0])}:</b> ${esc(x[1])}</p>`).join('')}</div>
+      <h3 class="sub">Manobras</h3><div class="lista-simples">${V.MANOBRAS.map(x=>`<p><b>${esc(x[0])}</b> <small>· ${esc(x[1])}</small><br>${esc(x[3])}</p>`).join('')}</div></section>`;
+    $$('[data-world-type]').forEach(b=>b.onclick=()=>{state.worldType=b.dataset.worldType;this.renderMundo();});
+    const redrawSearch=()=>{const q=norm($('#world-search')?.value||'');$('#world-cards').innerHTML=state.world.filter(x=>x.type===type&&(!q||norm(x.name+' '+x.description+' '+x.status).includes(q))).map(x=>`<article class="cartao"><header><h4>${esc(x.name)}</h4><span class="tag">${gm?(x.visible?'Revelado':'Oculto')+' · ':''}${esc(x.status||typeLabel)}</span></header><p class="texto">${esc(x.description||'Sem descrição pública.')}</p>${gm&&sec[x.id]?`<details class="segredo"><summary>Nota privada do mestre</summary><p>${esc(sec[x.id])}</p></details>`:''}${gm?`<div class="acoes"><button class="btn mini" data-world-edit="${esc(x.id)}">Editar</button><button class="btn mini ghost" data-world-toggle="${esc(x.id)}">${x.visible?'Ocultar':'Revelar'}</button><button class="btn mini ghost" data-world-secret="${esc(x.id)}">Nota privada</button><button class="btn mini perigo" data-world-del="${esc(x.id)}">Excluir</button></div>`:''}</article>`).join('')||'<div class="vazio">Nenhum resultado encontrado.</div>';bindCards();};
+    const bindCards=()=>{
+      $$('[data-world-edit]').forEach(b=>b.onclick=()=>this.editWorld(b.dataset.worldEdit));
+      $$('[data-world-toggle]').forEach(b=>b.onclick=()=>{const x=state.world.find(y=>y.id===b.dataset.worldToggle);if(!x)return;x.visible=!x.visible;this.saveWorldState().then(()=>this.renderMundo());});
+      $$('[data-world-secret]').forEach(b=>b.onclick=()=>{const id=b.dataset.worldSecret,o=secrets(),v=G.prompt('Nota privada do mestre (não é compartilhada):',o[id]||'');if(v!==null){o[id]=v;saveSecrets(o);this.renderMundo();}});
+      $$('[data-world-del]').forEach(b=>b.onclick=async()=>{if(!G.confirm('Excluir este registro do Mundo?'))return;state.world=state.world.filter(x=>x.id!==b.dataset.worldDel);await this.saveWorldState();this.renderMundo();});
+    };
+    $('#world-search')?.addEventListener('input',redrawSearch);bindCards();
+    if($('#world-add'))$('#world-add').onclick=()=>this.editWorld(null);
+  };
+  App.editWorld=function(id){
+    if(!isGM())return;
+    const s=this.extraState,old=s.world.find(x=>x.id===id)||{type:s.worldType,name:'',description:'',status:''};
+    const name=G.prompt('Nome do registro:',old.name);if(name===null)return;if(!name.trim())return this.toast('Informe um nome.',true);
+    const description=G.prompt('Descrição pública para a mesa:',old.description||'');if(description===null)return;
+    const status=G.prompt('Categoria, situação ou detalhe curto (opcional):',old.status||'');if(status===null)return;
+    const item=Object.assign({},old,{id:old.id||('w'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)),type:s.worldType,name:name.trim(),description,status,visible:!!old.visible});
+    if(old.id)s.world=s.world.map(x=>x.id===old.id?item:x);else s.world.push(item);
+    this.saveWorldState().then(()=>this.renderMundo());
+  };
+  App.renderRegras=function(){
+    const q=this.extraState.ruleQuery||'',sec=this.extraState.ruleSection||'all';
+    const all=[], add=(section,group,name,text)=>all.push({section,group,name,text:String(text||'')});
+    V.REGRAS.forEach(group=>group[2].forEach(x=>add('regras',group[1],x[0],x[1])));
+    V.CONDICOES.forEach(x=>add('condicoes','Condições',x[0],x[1]));
+    V.DANOS.forEach(x=>add('danos',x[1],x[0],x[2]==='F'?'Ao zerar a Vida, sugere Ferimento permanente.':x[2]==='L'?'Ao zerar a Vida, sugere Lesão permanente.':'Consulte a regra de dano e a decisão do mestre.'));
+    V.PROPRIEDADES.forEach(x=>add('armas','Propriedades de armas',x[0],x[1]));
+    V.ESPECIALIZACOES.forEach(x=>add('competencias','Especializações',x[0],x[1]));
+    V.APTIDOES.forEach(x=>add('aptidoes',x[2],x[0],'Atributos relacionados: '+x[1].join(', ')+'.'));
+    V.APT_NIVEIS.forEach((x,i)=>add('aptidoes','Níveis de aptidão','Nível '+i,x));
+    V.COMPETENCIAS.forEach(x=>add('competencias','Grupos',x[0],x[1].join(', ')+'.'));
+    V.COMP_NIVEIS.forEach((x,i)=>add('competencias','Níveis de competência','Nível '+i,x));
+    Object.keys(V.CLASSES).forEach(k=>add('classes','Classes',V.CLASSES[k].n,'Vida inicial '+V.CLASSES[k].vida+' · Vigor inicial '+V.CLASSES[k].vigor+'.'));
+    Object.keys(V.ESTILOS).forEach(k=>add('classes','Estilos de luta',k,V.ESTILOS[k].join(', ')+'.'));
+    V.POTENCIAIS.forEach(p=>add('potenciais','Potenciais',p.n,(p.v?'Valores: '+p.v.join(', ')+'. ':p.fixo?'Atributos fixos. ':p.livres?p.livres+' pontos livres. ':'')+p.x));
+    add('potenciais','Potenciais','Potenciais excepcionais',V.POT_EXCEPCIONAIS);
+    Object.keys(V.EQUIP).forEach(tipo=>V.EQUIP[tipo].forEach(it=>add('equipamento',it.g||tipo,it.n,[it.d,it.x,it.p?it.p+' kg':'',it.b?'B$'+it.b:''].filter(Boolean).join(' · '))));
+    V.HAB_MUNDO.forEach(x=>add('habilidades','Habilidades do mundo',x[0],x[1]+' PH'));
+    V.NAVIOS.forEach(x=>add('naval','Navios',x[0],'Tamanho '+x[1]+' · carga '+x[2]+' t · tripulação '+x[3]+' · '+x[4]+' nós · '+x[5]+' canhões · Vida '+x[6]+' · Resistência '+x[7]+' · CA '+x[8]));
+    V.MANOBRAS.forEach(x=>add('naval','Manobras navais',x[0],x[1]+'. '+x[3]));
+    V.REGRAS_NAVAL.forEach(x=>add('naval','Regras navais',x[0],x[1]));
+    add('povos','Povos','Raças',V.RACAS.join(', ')+'.');add('povos','Povos','Tribos',V.TRIBOS.join(', ')+'.');add('povos','Profissões','Profissões',V.PROFISSOES.join(', ')+'.');
+    V.NIVEL_CLASSE.forEach(x=>add('progressao','Classe','Nível '+x[0],'Don '+x[1]+' · '+x[2]));
+    V.NIVEL_PROF.forEach(x=>add('progressao','Profissão','Nível '+x[0],x[1]));
+    V.NIVEL_FRUTA.forEach(x=>add('progressao','Akuma no Mi','Nível '+x[0],x[1]));
+    const tokens=norm(q).split(/\s+/).filter(Boolean);
+    const found=all.filter(x=>(sec==='all'||x.section===sec)&&tokens.every(t=>norm(x.name+' '+x.group+' '+x.text).includes(t)));
+    const sections=[['all','Tudo'],['regras','Regras gerais'],['condicoes','Condições'],['danos','Tipos de dano'],['armas','Propriedades de armas'],['competencias','Competências e especializações'],['aptidoes','Aptidões'],['classes','Classes e estilos'],['potenciais','Potenciais'],['equipamento','Equipamento'],['habilidades','Habilidades'],['naval','Navios e mar'],['povos','Raças e profissões'],['progressao','Progressão']];
+    $('#tab-content').innerHTML=`<header class="tab-cab"><h2>Regras do sistema</h2><span class="tag">${found.length} resultados</span></header>
+      <div class="barra-busca"><input id="rules-search" type="search" value="${esc(q)}" placeholder="Buscar regra, condição, arma, aptidão, navio…"><select id="rules-section">${sections.map(x=>`<option value="${x[0]}" ${sec===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></div>
+      <div id="rules-list">${found.length?found.map(x=>`<article class="regra"><header><h4>${esc(x.name)}</h4><small>${esc(x.group)}</small></header><p>${esc(x.text)}</p></article>`).join(''):'<div class="vazio">Nenhuma regra encontrada. Tente outro termo.</div>'}</div>
+      <section class="card"><h3>Tabelas de progressão</h3><div class="tabela-wrap"><table class="tabela"><thead><tr><th>Nível de classe</th><th>Don</th><th>Ganhos</th></tr></thead><tbody>${V.NIVEL_CLASSE.map(x=>`<tr><th>${x[0]}</th><td>${x[1]}</td><td>${esc(x[2])}</td></tr>`).join('')}</tbody></table></div>
+      <div class="tabela-wrap"><table class="tabela"><thead><tr><th>Nível de profissão</th><th>Ganhos</th></tr></thead><tbody>${V.NIVEL_PROF.map(x=>`<tr><th>${x[0]}</th><td>${esc(x[1])}</td></tr>`).join('')}</tbody></table></div>
+      <div class="tabela-wrap"><table class="tabela"><thead><tr><th>Nível de fruta</th><th>Ganhos</th></tr></thead><tbody>${V.NIVEL_FRUTA.map(x=>`<tr><th>${x[0]}</th><td>${esc(x[1])}</td></tr>`).join('')}</tbody></table></div></section>
+      <p class="dica">Compêndio ampliado com o conteúdo de regras e tabelas disponível no arquivo de referência. Caso o livro/PDF tenha capítulos adicionais, eles não estão incluídos automaticamente.</p>`;
+    $('#rules-search').oninput=e=>{this.extraState.ruleQuery=e.target.value;this.renderRegras();const el=$('#rules-search');el.focus();el.setSelectionRange(el.value.length,el.value.length);};
+    $('#rules-section').onchange=e=>{this.extraState.ruleSection=e.target.value;this.renderRegras();};
+  };
+  App.renderMestre=function(){
+    const generators=[
+      ['Nome de pirata',()=>pick(V.NOMES_A)+' '+pick(V.NOMES_B)],
+      ['Nome de pessoa',()=>pick(V.NOMES_P)],
+      ['Evento no mar',()=>pick(V.EVENTOS_MAR)],
+      ['Nome de navio',()=>pick(V.NOMES_A)+' '+pick([' dos Mares',' do Amanhecer',' da Tempestade',' do Horizonte',' da Fortuna',' da Liberdade'])],
+      ['Nome de ilha',()=>pick(['Ilha de '+pick(V.NOMES_P),'Porto '+pick(V.NOMES_A),'Atol '+pick(V.NOMES_B),'Arquipélago de '+pick(V.NOMES_P)])]
+    ];
+    $('#tab-content').innerHTML=`<header class="tab-cab"><h2>Ferramentas do mestre</h2></header><section class="card"><h3>Geradores</h3><p class="dica">Gere nomes e acontecimentos para improvisar durante a campanha.</p>${generators.map((g,i)=>`<div class="gerador"><b>${g[0]}</b><output class="gerado" id="gen-${i}">—</output><div class="acoes"><button class="btn mini primario" data-gen="${i}">🎲 Sortear</button><button class="btn mini ghost" data-copy-gen="${i}">Copiar</button><button class="btn mini ghost" data-send-gen="${i}">Enviar à mesa</button></div></div>`).join('')}</section>
+      <section class="card"><h3>Orientações da mesa</h3><p>Use a aba Mundo para registrar lugares, NPCs, facções, missões, diário, handouts e navios. Os registros públicos são sincronizados para os participantes.</p><p class="dica">As notas privadas do mestre ficam apenas neste navegador. Para manter segredos entre dispositivos, será necessário configurar uma área privada própria no banco de dados.</p></section>`;
+    generators.forEach((g,i)=>{const out=$('#gen-'+i);$$('[data-gen="'+i+'"]').forEach(b=>b.onclick=()=>out.textContent=g[1]());$$('[data-copy-gen="'+i+'"]').forEach(b=>b.onclick=()=>{if(out.textContent!=='—')G.navigator.clipboard?.writeText(out.textContent).then(()=>this.toast('Copiado.'));});$$('[data-send-gen="'+i+'"]').forEach(b=>b.onclick=()=>{if(out.textContent!=='—')S.postFeed(this.room.id,{author:this.member.name,kind:'chat',payload:{text:g[0]+': '+out.textContent}}).then(()=>this.toast('Enviado à mesa.')).catch(e=>this.toast(e.message,true));});});
+  };
+  App.renderCombate=function(){
+    const e=this.extraState.combat,gm=isGM();
+    const order=e.items.slice().sort((a,b)=>Number(b.ini)-Number(a.ini)||Number(b.agi||0)-Number(a.agi||0)||a.name.localeCompare(b.name));
+    const current=order.find(x=>x.id===e.turn);
+    $('#tab-content').innerHTML=`<header class="tab-cab"><h2>${e.active?'Combate · rodada '+e.round:'Tracker de combate'}</h2>${gm?`<div class="acoes">${e.active?'<button class="btn mini" id="combat-prev">Turno anterior</button><button class="btn mini primario" id="combat-next">Próximo turno</button><button class="btn mini perigo" id="combat-end">Encerrar</button>':'<button class="btn primario" id="combat-start">Iniciar combate</button>'}</div>`:''}</header>
+      ${current&&e.active?`<div class="faixa-vez"><b>Vez de ${esc(current.name)}</b> · Iniciativa ${Number(current.ini)||0}</div>`:''}
+      ${gm?`<section class="card"><h3>Adicionar participante</h3><div class="grade"><label>Nome<input id="combat-name" placeholder="Personagem ou inimigo"></label><label>Modificador de iniciativa<input id="combat-mod" type="number" value="0"></label><label>Vida máxima<input id="combat-hpmax" type="number" value="20" min="1"></label><label>CA<input id="combat-ca" type="number" value="10"></label></div><div class="acoes"><button class="btn mini primario" id="combat-roll-add">Rolar iniciativa e adicionar</button><button class="btn mini" id="combat-manual-add">Adicionar com iniciativa manual</button></div></section>`:''}
+      <section class="card"><h3>Ordem de iniciativa</h3>${order.length?order.map(x=>`<article class="comb-linha ${e.active&&x.id===e.turn?'ativo':''}"><div class="ini">${Number(x.ini)||0}</div><div class="info"><b>${esc(x.name)}</b><small>${esc(x.kind||'Participante')} · CA ${Number(x.ca)||10} · Vida ${Number(x.hp)||0}/${Number(x.hpmax)||0}</small><div class="barra"><i style="width:${Math.max(0,Math.min(100,100*(Number(x.hp)||0)/Math.max(1,Number(x.hpmax)||1)))}%"></i></div></div>${gm?`<div class="acoes"><button class="btn mini" data-hp="${esc(x.id)}" data-delta="-1">− Vida</button><button class="btn mini" data-hp="${esc(x.id)}" data-delta="1">+ Vida</button><button class="btn mini perigo" data-combat-del="${esc(x.id)}">✕</button></div>`:''}</article>`).join(''):'<div class="vazio">Nenhum participante. Adicione personagens e inimigos para montar a ordem de iniciativa.</div>'}</section>
+      ${!gm?'<p class="dica">O mestre controla a ordem, os turnos e os pontos de vida deste combate.</p>':''}`;
+    if(!gm)return;
+    const persist=()=>this.saveCombatState();
+    const add=(manual)=>{
+      const name=$('#combat-name').value.trim();if(!name)return this.toast('Digite o nome do participante.',true);
+      const mod=Number($('#combat-mod').value)||0,roll=manual?null:V.d20(0),ini=manual?Number(G.prompt('Valor de iniciativa:','10')):roll.v+mod;
+      if(ini===null||!Number.isFinite(ini))return;
+      e.items.push({id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),name,kind:'Participante',ini,agi:mod,hp:Number($('#combat-hpmax').value)||20,hpmax:Number($('#combat-hpmax').value)||20,ca:Number($('#combat-ca').value)||10});
+      e.items.sort((a,b)=>b.ini-a.ini);if(!e.turn)e.turn=e.items[0].id;persist().then(()=>this.renderCombate());
+    };
+    $('#combat-roll-add').onclick=()=>add(false);$('#combat-manual-add').onclick=()=>add(true);
+    $('#combat-import-chars')?.addEventListener('click',async()=>{
+      try{
+        const chars=await S.getAllCharacters(this.room.id),known=new Set(e.items.map(x=>x.ref).filter(Boolean));
+        let count=0;
+        chars.forEach(rec=>{
+          const d=rec.data||{},calc=V.calc(d),ref=rec.user_id||rec.id;
+          if(!d.nome||known.has(ref))return;
+          const roll=V.d20(0),agi=Number(calc.agiE)||0;
+          e.items.push({id:'pc:'+ref,ref,name:d.nome,kind:'Jogador',ini:roll.v+agi,hp:d.vidaAtual==null?calc.vidaTotal:Number(d.vidaAtual),hpmax:calc.vidaTotal,ca:calc.CA,agi});
+          known.add(ref);count++;
+        });
+        if(!count)return this.toast('Não há novas fichas para importar.');
+        if(!e.turn)e.turn=e.items.slice().sort((a,b)=>b.ini-a.ini)[0].id;
+        await persist();this.renderCombate();this.toast(count+' personagem(ns) importado(s).');
+      }catch(err){this.toast('Erro ao importar fichas: '+err.message,true);}
+    });
+    $('#combat-start')?.addEventListener('click',()=>{if(!order.length)return this.toast('Adicione participantes primeiro.',true);e.active=true;e.round=1;e.turn=order[0].id;persist().then(()=>this.renderCombate());});
+    $('#combat-next')?.addEventListener('click',()=>{const i=order.findIndex(x=>x.id===e.turn),n=(i+1)%order.length;if(i>=0&&n===0)e.round++;e.turn=order[n].id;persist().then(()=>this.renderCombate());});
+    $('#combat-prev')?.addEventListener('click',()=>{const i=order.findIndex(x=>x.id===e.turn),n=(i<=0?order.length-1:i-1);if(i===0)e.round=Math.max(1,e.round-1);e.turn=order[n].id;persist().then(()=>this.renderCombate());});
+    $('#combat-end')?.addEventListener('click',()=>{if(!G.confirm('Encerrar o combate e limpar o tracker?'))return;this.extraState.combat=initialCombat();persist().then(()=>this.renderCombate());});
+    $$('[data-combat-del]').forEach(b=>b.onclick=()=>{e.items=e.items.filter(x=>x.id!==b.dataset.combatDel);if(e.turn===b.dataset.combatDel)e.turn='';persist().then(()=>this.renderCombate());});
+    $$('[data-hp]').forEach(b=>b.onclick=()=>{const x=e.items.find(y=>y.id===b.dataset.hp);if(!x)return;x.hp=Math.max(0,Math.min(x.hpmax,x.hp+Number(b.dataset.delta)));persist().then(()=>this.renderCombate());});
+  };
+  App.renderTab=function(){
+    if(this.tab==='ficha')this.renderFicha();
+    else if(this.tab==='mesa')this.renderMesa();
+    else if(this.tab==='mundo')this.renderMundo();
+    else if(this.tab==='regras')this.renderRegras();
+    else if(this.tab==='mestre')this.renderMestre();
+    else if(this.tab==='combate')this.renderCombate();
+  };
+  const oldRoom=App.renderRoom;
+  App.renderRoom=function(){
+    oldRoom.call(this);
+    const nav=$('.abas');
+    const tabs=[['combate','⚔️ Combate'],['mundo','🌍 Mundo'],['regras','📖 Regras'],['mestre','🧭 Mestre']];
+    tabs.forEach(([id,label])=>{const b=document.createElement('button');b.type='button';b.className='aba'+(this.tab===id?' on':'');b.dataset.tab=id;b.textContent=label;b.setAttribute('aria-selected',this.tab===id?'true':'false');b.onclick=()=>{this.tab=id;this.renderRoom();};nav.appendChild(b);});
+  };
+  const oldFeed=App.renderFeed;
+  App.renderFeed=function(){
+    const el=$('#feed');if(!el)return;
+    const visible=(this.feed||[]).filter(x=>x.kind!=='vdm_world_state'&&x.kind!=='vdm_combat_state');
+    el.innerHTML=visible.map(x=>this.feedItemHTML(x)).join('');el.scrollTop=el.scrollHeight;
+  };
+})(typeof globalThis!=='undefined'?globalThis:window);
+
+</script>
 <style>
 :root{--bg:#f4eedd;--bg2:#ece3cd;--card:#fbf8ef;--inp:#fffdf7;--fg:#1b2a3a;--mut:#5a6a79;--line:#dccfb3;--accent:#0d6b78;--accent-fg:#fff;--vida:#c2412f;--vigor:#2f7fb8;--ok:#2b7a4b;--bad:#b42318;--sans:'Inter',system-ui,sans-serif;--mono:'IBM Plex Mono',monospace;--display:'Pirata One',serif}
 @media(prefers-color-scheme:dark){:root{--bg:#0b1520;--bg2:#101e2b;--card:#14232f;--inp:#0f1c27;--fg:#e5edf4;--mut:#94a7b7;--line:#263a4b;--accent:#4dbccc;--accent-fg:#06222a}}
@@ -103,9 +476,30 @@ textarea{resize:vertical}
 .modal header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
 .modal .corpo{padding:16px;overflow-y:auto}
 .all-char{background:var(--bg2);border-radius:8px;padding:10px;margin-bottom:8px}
+
+/* Expansão: Mundo, compêndio, geradores e tracker */
+.subabas{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}
+.subaba{border:1px solid var(--line);background:var(--card);border-radius:99px;padding:6px 12px;cursor:pointer}
+.subaba.on{background:var(--accent);color:var(--accent-fg)}
+.barra-busca{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-bottom:12px}
+.regra{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:8px}
+.regra header{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.regra h4{font:400 1.15rem var(--display);color:var(--accent)}
+.regra p{white-space:pre-wrap;overflow-wrap:anywhere}
+.tabela-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;margin:8px 0 14px}
+.tabela{border-collapse:collapse;width:100%;font-size:.86rem}
+.tabela th,.tabela td{padding:7px 9px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+.tabela thead th{background:var(--bg2);color:var(--mut);font-size:.75rem}
+.gerador{display:grid;gap:7px;padding:10px 0;border-bottom:1px dashed var(--line)}
+.gerado{font:400 1.3rem var(--display);overflow-wrap:anywhere}
+.faixa-vez{background:var(--accent);color:var(--accent-fg);padding:12px 16px;border-radius:12px;margin-bottom:12px}
+.seg redo{border:1px dashed var(--accent2)}
+@media(max-width:560px){.barra-busca{grid-template-columns:1fr}}
+
 </style>
 </head>
-<body>
+
+  <body>
 <div id="app"><div class="card" style="max-width:400px;margin:20vh auto;text-align:center"><h3>Carregando…</h3></div></div>
 <div id="toasts"></div>
 <script>
@@ -524,225 +918,4 @@ const SUPABASE_KEY = 'sb_publishable_kZ26pOxY_mkZLl__dIlCjA_s81-i1OR';
             <button class="btn mini" data-life="+1">+</button>
           </div>
           <div class="bar-row">
-            <label>Vigor</label>
-            <button class="btn mini" data-vig="-1">−</button>
-            <input type="number" value="${c.vigorAtual==null?calc.vigorTotal:c.vigorAtual}" data-f="vigorAtual" style="max-width:90px">
-            <span>/ ${calc.vigorTotal}</span>
-            <button class="btn mini" data-vig="+1">+</button>
-          </div>
-          <h4>Ataques</h4>
-          <div id="ataques-list">${ataquesHTML||'<p class="hint">Nenhum ataque.</p>'}</div>
-          <button class="btn mini" id="btn-add-atk">+ Ataque</button>
-          <h4>Habilidades</h4>
-          <div id="habs-list">${habsHTML||'<p class="hint">Nenhuma habilidade.</p>'}</div>
-          <button class="btn mini" id="btn-add-hab">+ Habilidade</button>
-          <h4>Condições</h4>
-          <div class="cond-grid">${condHTML}</div>
-          <h4>Notas</h4>
-          <textarea rows="4" data-f="notas" placeholder="História, aparência, sonhos...">${esc(c.notas||'')}</textarea>
-          <div class="ficha-acoes">
-            <button class="btn primario" id="btn-save">💾 Salvar ficha</button>
-            ${isGM?'<button class="btn" id="btn-view-all">👥 Ver todos os personagens</button>':''}
-          </div>
-        </div>`;
-      this.bindFicha();
-    },
-    bindFicha(){
-      const self = this, c = this.character;
-      $$('[data-f]').forEach(inp => {
-        inp.oninput = () => {
-          const f = inp.dataset.f;
-          const v = inp.type === 'number' ? Number(inp.value) : inp.value;
-          c[f] = v;
-          self.markDirty();
-        };
-      });
-      $$('[data-attr]').forEach(inp => {
-        inp.oninput = () => {
-          const k = inp.dataset.attr, f = inp.dataset.field;
-          if (!c.atr[k]) c.atr[k] = {b:0,m:0};
-          c.atr[k][f] = Number(inp.value) || 0;
-          self.markDirty();
-          clearTimeout(self._rc); self._rc = setTimeout(() => self.renderFicha(), 500);
-        };
-      });
-      $$('[data-life]').forEach(b => b.onclick = () => {
-        const calc = V.calc(c);
-        c.vidaAtual = Math.max(0, Math.min(calc.vidaTotal, (c.vidaAtual==null?calc.vidaTotal:c.vidaAtual) + Number(b.dataset.life)));
-        self.markDirty(); self.renderFicha();
-      });
-      $$('[data-vig]').forEach(b => b.onclick = () => {
-        const calc = V.calc(c);
-        c.vigorAtual = Math.max(0, Math.min(calc.vigorTotal, (c.vigorAtual==null?calc.vigorTotal:c.vigorAtual) + Number(b.dataset.vig)));
-        self.markDirty(); self.renderFicha();
-      });
-      $$('[data-atk]').forEach(inp => {
-        inp.oninput = () => {
-          const i = Number(inp.dataset.atk), f = inp.dataset.f;
-          c.ataques[i][f] = inp.type === 'number' ? Number(inp.value) : inp.value;
-          self.markDirty();
-        };
-      });
-      $$('[data-rollatk]').forEach(b => b.onclick = () => self.rollAttack(c.ataques[Number(b.dataset.rollatk)]));
-      $$('[data-delatk]').forEach(b => b.onclick = () => { c.ataques.splice(Number(b.dataset.delatk),1); self.markDirty(); self.renderFicha(); });
-      $('#btn-add-atk').onclick = () => { c.ataques = c.ataques||[]; c.ataques.push({n:'Novo ataque', dano:'1d6', bonus:0}); self.markDirty(); self.renderFicha(); };
-      $$('[data-hab]').forEach(inp => {
-        inp.oninput = () => {
-          const i = Number(inp.dataset.hab), f = inp.dataset.f;
-          c.habs[i][f] = inp.value;
-          self.markDirty();
-        };
-      });
-      $$('[data-delhab]').forEach(b => b.onclick = () => { c.habs.splice(Number(b.dataset.delhab),1); self.markDirty(); self.renderFicha(); });
-      $('#btn-add-hab').onclick = () => { c.habs = c.habs||[]; c.habs.push({n:'Nova habilidade'}); self.markDirty(); self.renderFicha(); };
-      $$('[data-cond]').forEach(inp => {
-        inp.onchange = () => {
-          c.cond = c.cond||[];
-          const nm = inp.dataset.cond;
-          if (inp.checked && !c.cond.includes(nm)) c.cond.push(nm);
-          else if (!inp.checked) c.cond = c.cond.filter(x => x !== nm);
-          self.markDirty();
-        };
-      });
-      $('#btn-save').onclick = () => self.saveNow();
-      if ($('#btn-view-all')) $('#btn-view-all').onclick = () => self.showAllChars();
-    },
-    async saveNow(){
-      const st = $('#save-status');
-      if (st) st.textContent = 'Salvando…';
-      try {
-        await S.saveCharacter(this.room.id, this.character);
-        if (st) st.textContent = '✓ Salvo';
-      } catch(e){
-        if (st) st.textContent = '✕ Erro ao salvar';
-        this.toast('Erro ao salvar: ' + e.message, true);
-      }
-    },
-    markDirty(){
-      const st = $('#save-status');
-      if (st) st.textContent = '• Editando…';
-      clearTimeout(this.saveTimer);
-      this.saveTimer = setTimeout(() => this.saveNow(), 1500);
-    },
-    async rollAttack(at){
-      const calc = V.calc(this.character);
-      const mod = calc.don + (at.bonus||0);
-      const d = V.d20(0);
-      const total = d.v + mod;
-      try {
-        await S.postFeed(this.room.id, {
-          author: this.member.name, kind:'roll',
-          payload: {label:'Ataque: ' + at.n, expr:'d20+'+mod, groups:[{e:'1d20', r:d.r}], mod, total, extra:'Dano: ' + at.dano}
-        });
-        this.toast('Rolagem enviada à mesa');
-      } catch(e){ this.toast('Erro: ' + e.message, true); }
-    },
-    renderMesa(){
-      $('#tab-content').innerHTML = `
-        <div class="mesa-wrap">
-          <div class="card">
-            <h3>Rolagens</h3>
-            <div class="dice-bar">
-              <input id="in-dice" placeholder="ex: 2d6+3, 1d20+5, 4d6kh3" style="flex:1">
-              <button class="btn primario" id="btn-roll">🎲 Rolar</button>
-            </div>
-            <div class="quick-dice">
-              <button class="btn mini" data-dice="d20">d20</button>
-              <button class="btn mini" data-dice="2d6">2d6</button>
-              <button class="btn mini" data-dice="1d8">1d8</button>
-              <button class="btn mini" data-dice="1d10">1d10</button>
-              <button class="btn mini" data-dice="1d12">1d12</button>
-              <button class="btn mini" data-dice="1d100">d100</button>
-            </div>
-          </div>
-          <div class="card feed-card">
-            <h3>Feed da mesa</h3>
-            <div id="feed" class="feed"></div>
-            <div class="chat-bar">
-              <input id="in-chat" placeholder="Mensagem para a mesa…" style="flex:1">
-              <button class="btn" id="btn-send">Enviar</button>
-            </div>
-          </div>
-        </div>`;
-      const self = this;
-      $('#btn-roll').onclick = () => {
-        const expr = $('#in-dice').value.trim();
-        if (expr) self.rollExpression(expr);
-      };
-      $('#in-dice').onkeydown = e => { if (e.key === 'Enter') $('#btn-roll').click(); };
-      $$('[data-dice]').forEach(b => b.onclick = () => {
-        $('#in-dice').value = b.dataset.dice;
-        self.rollExpression(b.dataset.dice);
-      });
-      $('#btn-send').onclick = () => self.sendChat();
-      $('#in-chat').onkeydown = e => { if (e.key === 'Enter') self.sendChat(); };
-      this.renderFeed();
-    },
-    async rollExpression(expr){
-      const r = V.rollExpr(expr);
-      if (!r) return this.toast('Expressão inválida. Ex: 2d6+3', true);
-      try {
-        await S.postFeed(this.room.id, {
-          author: this.member.name, kind:'roll',
-          payload: {label:'Rolagem', expr, groups:r.groups, mod:r.flat, total:r.total}
-        });
-        $('#in-dice').value = '';
-      } catch(e){ this.toast('Erro: ' + e.message, true); }
-    },
-    async sendChat(){
-      const text = $('#in-chat').value.trim();
-      if (!text) return;
-      try {
-        await S.postFeed(this.room.id, {author:this.member.name, kind:'chat', payload:{text}});
-        $('#in-chat').value = '';
-      } catch(e){ this.toast('Erro: ' + e.message, true); }
-    },
-    renderFeed(){
-      const el = $('#feed');
-      if (!el) return;
-      el.innerHTML = this.feed.map(item => this.feedItemHTML(item)).join('');
-      el.scrollTop = el.scrollHeight;
-    },
-    feedItemHTML(item){
-      const p = item.payload || {};
-      const time = new Date(item.created_at || Date.now()).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-      if (item.kind === 'chat'){
-        return `<div class="feed-item chat"><div class="feed-head"><b>${esc(item.author_name)}</b><time>${time}</time></div><p>${esc(p.text||'')}</p></div>`;
-      }
-      const groups = (p.groups||[]).map(g => `<span>${esc(g.e)}: ${g.r.map(x=>`<span class="die">${x}</span>`).join('')}</span>`).join(' ');
-      return `<div class="feed-item roll">
-        <div class="feed-head"><b>${esc(item.author_name)}</b> • ${esc(p.label||'Rolagem')}<time>${time}</time></div>
-        <div class="roll-body"><div class="roll-total">${p.total}</div><div class="roll-detail">${groups}${p.mod?` <span class="mod">${p.mod>0?'+':''}${p.mod}</span>`:''}</div></div>
-        ${p.extra?`<div class="roll-extra">${esc(p.extra)}</div>`:''}
-      </div>`;
-    },
-    async showAllChars(){
-      try {
-        const chars = await S.getAllCharacters(this.room.id);
-        const html = chars.map(ch => {
-          const d = ch.data || {};
-          const calc = V.calc(d);
-          return `<div class="all-char"><b>${esc(d.nome||'Sem nome')}</b><div class="hint">Vida ${calc.vidaTotal} • Vigor ${calc.vigorTotal} • CA ${calc.CA} • CD ${calc.CD}</div></div>`;
-        }).join('');
-        const modal = document.createElement('div');
-        modal.className = 'modal-back';
-        modal.innerHTML = `<div class="modal"><header><h3>Personagens da mesa</h3><button class="btn mini" id="m-close">✕</button></header><div class="corpo">${html||'<p class="hint">Nenhum personagem ainda.</p>'}</div></div>`;
-        document.body.appendChild(modal);
-        modal.querySelector('#m-close').onclick = () => modal.remove();
-        modal.onclick = e => { if (e.target === modal) modal.remove(); };
-      } catch(e){ this.toast('Erro: ' + e.message, true); }
-    },
-    toast(msg, bad){
-      const t = document.createElement('div');
-      t.className = 'toast' + (bad?' bad':'');
-      t.textContent = msg;
-      $('#toasts').appendChild(t);
-      setTimeout(() => t.classList.add('sai'), 2400);
-      setTimeout(() => t.remove(), 2800);
-    }
-  };
-  window.addEventListener('DOMContentLoaded', () => A.App.init());
-})(typeof globalThis !== 'undefined' ? globalThis : window);
-</script>
-</body>
-</html>
+            <label>Vigo
